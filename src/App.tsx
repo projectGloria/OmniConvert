@@ -3,10 +3,12 @@ import { DropOverlay } from "./components/dropzone/DropOverlay";
 import { EmptyState } from "./components/dropzone/EmptyState";
 import { QueueList } from "./components/queue/QueueList";
 import { BottomBar } from "./components/bottombar/BottomBar";
+import { useConversionEvents } from "./hooks/useConversionEvents";
 import { useFileDrop } from "./hooks/useFileDrop";
 import { useQueue } from "./store/queueStore";
 
 export function App() {
+  useConversionEvents();
   const isDragging = useFileDrop();
   // Boolean selector: App re-renders only when the queue flips empty↔non-empty,
   // not on every add/remove.

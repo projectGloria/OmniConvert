@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "externalBin": [
+      "binaries/ffmpeg",
+      "binaries/ffprobe",
+      "binaries/pandoc",
+      "binaries/typst"
+    ],
+    "resources": {
+      "resources/pdfium.dll": "pdfium.dll"
+    }
+  }
+}

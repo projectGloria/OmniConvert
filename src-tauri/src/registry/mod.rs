@@ -16,7 +16,9 @@ use serde::Serialize;
 use ts_rs::TS;
 
 pub use formats::{Category, Format};
-pub use targets::Target;
+pub use route::{route_for, EngineRoute};
+pub use shape::rows_of;
+pub use targets::{Target, TargetKind};
 
 /// Everything the UI needs to render one queue row. Returned by `probe_files`.
 #[derive(Debug, Clone, Serialize, TS)]

@@ -1,20 +1,20 @@
 import { memo } from "react";
 import { motion } from "motion/react";
-import { Settings2, X } from "lucide-react";
-import { formatBytes } from "../../lib/format";
 import { useQueue } from "../../store/queueStore";
-import type { JobId } from "../../types/queue";
+import { ACTIVE, type JobId } from "../../types/queue";
 import { FormatPill } from "../picker/FormatPill";
 import { InputBadge } from "./InputBadge";
 import { ProgressBar } from "./ProgressBar";
+import { RowActions } from "./RowActions";
+import { RowStatus } from "./RowStatus";
 
 /**
  * memo + id-only prop: when QueueList re-renders because `order` changed (add/remove),
  * existing rows bail out — their only prop is a string that didn't change.
+ * Progress ticks don't reach this component at all (see progressStore).
  */
 export const QueueRow = memo(function QueueRow({ id }: { id: JobId }) {
   const item = useQueue((s) => s.items[id]);
-  const remove = useQueue((s) => s.remove);
   const setTarget = useQueue((s) => s.setTarget);
 
   // Can be undefined for one frame while AnimatePresence plays the exit animation.
@@ -37,35 +37,18 @@ export const QueueRow = memo(function QueueRow({ id }: { id: JobId }) {
           <p className="w-fit max-w-full truncate text-sm text-ink" title={item.path}>
             {item.name}
           </p>
-          <p className="text-xs text-muted">
-            {formatBytes(item.size)}
-            {/* Rust only sets detectedAs when magic bytes overrode the extension — no re-check here. */}
-            {item.detectedAs && (
-              <span className="text-amber-400/80"> · detected as {item.detectedAs.toUpperCase()}</span>
-            )}
+          <p className="truncate text-xs">
+            <RowStatus item={item} />
           </p>
         </div>
 
-        <FormatPill targets={item.targets} selectedId={item.target} onSelect={(t) => setTarget(id, t)} />
-
-        {/* Phase 4: opens the per-item settings drawer. */}
-        <button
-          type="button"
-          disabled
-          aria-label="Conversion settings"
-          className="grid size-7 place-items-center rounded-md text-muted/50 disabled:cursor-not-allowed"
-        >
-          <Settings2 size={15} strokeWidth={1.75} />
-        </button>
-
-        <button
-          type="button"
-          aria-label={`Remove ${item.name}`}
-          onClick={() => remove(id)}
-          className="grid size-7 place-items-center rounded-md text-muted opacity-0 transition hover:bg-raised hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
-        >
-          <X size={15} />
-        </button>
+        <FormatPill
+          targets={item.targets}
+          selectedId={item.target}
+          locked={ACTIVE.has(item.status)}
+          onSelect={(t) => setTarget(id, t)}
+        />
+        <RowActions item={item} />
       </div>
 
       <ProgressBar id={id} />

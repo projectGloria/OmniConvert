@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { FileInfo } from "../types/generated/FileInfo";
-import type { JobId, QueueItem } from "../types/queue";
+import { ACTIVE, type ItemStatus, type JobId, type QueueItem } from "../types/queue";
 import { useProgress } from "./progressStore";
 
 interface QueueState {
@@ -12,8 +12,17 @@ interface QueueState {
   addFiles: (files: FileInfo[]) => number;
   /** Pass null to clear. Ignores ids Rust didn't offer for this file. */
   setTarget: (id: JobId, targetId: string | null) => void;
+  /** Lifecycle transitions driven by backend events (and by Convert). */
+  setStatus: (id: JobId, status: ItemStatus, extra?: { output?: string; error?: string }) => void;
   remove: (id: JobId) => void;
   clear: () => void;
+}
+
+/** Immutable single-item patch; returns the same state object on no-op so nothing re-renders. */
+function patch(s: QueueState, id: JobId, fn: (item: QueueItem) => QueueItem | null): QueueState | Partial<QueueState> {
+  const item = s.items[id];
+  const next = item ? fn(item) : null;
+  return next ? { items: { ...s.items, [id]: next } } : s;
 }
 
 export const useQueue = create<QueueState>()((set, get) => ({
@@ -33,7 +42,7 @@ export const useQueue = create<QueueState>()((set, get) => ({
       known.add(key); // also dedupes within the same drop (folder + file inside it)
 
       const id = crypto.randomUUID();
-      nextItems[id] = { ...file, id, target: null, status: "idle" };
+      nextItems[id] = { ...file, id, target: null, status: "idle", settings: { preset: "balanced" }, output: null, error: null };
       nextOrder.push(id);
     }
 
@@ -44,13 +53,24 @@ export const useQueue = create<QueueState>()((set, get) => ({
   },
 
   setTarget: (id, targetId) =>
-    set((s) => {
-      const item = s.items[id];
-      if (!item || item.target === targetId) return s; // same state ref → no subscriber fires
-      // Guard against stale UI: the Rust matrix is the authority on what's legal.
-      if (targetId !== null && !item.targets.some((t) => t.id === targetId)) return s;
-      return { items: { ...s.items, [id]: { ...item, target: targetId } } };
-    }),
+    set((s) =>
+      patch(s, id, (item) => {
+        if (item.target === targetId || ACTIVE.has(item.status)) return null; // locked while converting
+        // Guard against stale UI: the Rust matrix is the authority on what's legal.
+        if (targetId !== null && !item.targets.some((t) => t.id === targetId)) return null;
+        // A new target invalidates the previous result, so the row becomes startable again.
+        return { ...item, target: targetId, status: "idle", output: null, error: null };
+      }),
+    ),
+
+  setStatus: (id, status, extra) =>
+    set((s) =>
+      patch(s, id, (item) => {
+        // Late progress events can arrive after completion; never regress a finished row.
+        if (status === "running" && item.status !== "queued") return null;
+        return { ...item, status, output: extra?.output ?? item.output, error: extra?.error ?? null };
+      }),
+    ),
 
   remove: (id) => {
     set((s) => {

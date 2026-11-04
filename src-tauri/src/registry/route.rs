@@ -1,6 +1,4 @@
 //! Which engine executes a given (source, target) pair.
-//! Consumed by the Phase 3 job runner; until then only the matrix tests call it.
-#![cfg_attr(not(test), allow(dead_code))]
 
 use super::formats::{Category, Format};
 use super::targets::TargetKind;

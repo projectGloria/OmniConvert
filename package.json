@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "bindings": "cargo test --manifest-path src-tauri/Cargo.toml export_bindings"
+    "bindings": "cargo test --manifest-path src-tauri/Cargo.toml export_bindings",
+    "tauri:build": "tauri build --config src-tauri/tauri.bundle.conf.json",
+    "sidecars": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-sidecars.ps1"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",

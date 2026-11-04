@@ -21,14 +21,17 @@ import { FormatPopover } from "./FormatPopover";
 interface FormatPillProps {
   targets: Target[];
   selectedId: string | null;
+  /** True while the item is converting: target can't change mid-job. */
+  locked?: boolean;
   onSelect: (targetId: string) => void;
 }
 
-export function FormatPill({ targets, selectedId, onSelect }: FormatPillProps) {
+export function FormatPill({ targets, selectedId, locked = false, onSelect }: FormatPillProps) {
   const [open, setOpen] = useState(false);
   // Derived on render: no need to store the selected Target object in state.
   const selected = selectedId ? targets.find((t) => t.id === selectedId) : undefined;
-  const disabled = targets.length === 0;
+  const unsupported = targets.length === 0;
+  const disabled = unsupported || locked;
 
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -71,7 +74,7 @@ export function FormatPill({ targets, selectedId, onSelect }: FormatPillProps) {
             : "border-line bg-base text-muted hover:border-[#2a2a32] hover:text-ink",
         )}
       >
-        <span className="truncate">{disabled ? "Unsupported" : (selected?.label ?? "Choose format")}</span>
+        <span className="truncate">{unsupported ? "Unsupported" : (selected?.label ?? "Choose format")}</span>
         {!disabled && <ChevronDown size={13} className={cn("shrink-0 transition-transform", open && "rotate-180")} />}
       </button>
 

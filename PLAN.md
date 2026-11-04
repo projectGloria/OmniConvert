@@ -430,6 +430,16 @@ The container decides the codec. WEBM forces `libvpx-vp9`/`libopus` (CPU, `-crf 
 
 **Exit check:** `cargo check` ✓, `cargo test` for the pure-Rust engines ✓, a manual run of MP4→MP3 and MP4→MP4 (Balanced) with live progress and Cancel mid-encode, and Task Manager showing no leftover `ffmpeg.exe` after Cancel **and** after killing the app process.
 
+### 3.6 As built (differences from the plan above)
+- **One Job Object per sidecar run instead of one for the whole app.** Pandoc spawns `typst` as a grandchild, so killing pandoc's PID would leave typst orphaned. `TerminateJobObject` kills the whole tree on Cancel. Closing the handle (when the job ends or the app crashes) does the same through `KILL_ON_JOB_CLOSE`. The per-job `CancellationToken` map is the "active PIDs in state" registry.
+- **`externalBin` and `resources` moved to `src-tauri/tauri.bundle.conf.json`, used by `npm run tauri:build`.** `tauri-build` checks that those files exist even for `cargo check`, so keeping them in the base config would break every build until the sidecars are fetched. In dev, the app finds the tools via `src-tauri/binaries/dev/<name>.exe`, which are hard links created by the fetch script. They need plain names because pandoc recognises `--pdf-engine` by its basename.
+- **NASM is not needed.** `image` pulls in `ravif` with default features off, so rav1e's assembly isn't built. AVIF encoding is slower, but there's no extra toolchain.
+- **quick-xml is pinned at 0.37.** From 0.38 on, entities arrive as separate `GeneralRef` events, which is more machinery than a small XML↔data adapter needs.
+- **serde_json uses `preserve_order`.** Without it, JSON objects come out with alphabetical keys, so CSV→JSON would scramble the column order.
+- **Part files are named `<name>.omni-part.<ext>`.** Keeping the real extension lets ffmpeg and pandoc infer the output container, and the infix still makes partial files obvious. They're deleted on failure or cancel.
+- **The `ico` crate was dropped.** `image`'s `IcoEncoder::encode_images` already writes multi-size icons.
+- **The fetch script runs on Windows PowerShell 5.1** (`pwsh` isn't installed). It is trust-on-first-use: `-UpdateLock` resolves the releases and records their SHA-256 hashes in `scripts/sidecars.lock.json`, and later runs check against those hashes.
+
 ---
 
 ## Phase 4 — UX Polish: Format Picker, Settings Drawer, Explorer Integration
