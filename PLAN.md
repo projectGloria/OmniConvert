@@ -437,6 +437,7 @@ The container decides the codec. WEBM forces `libvpx-vp9`/`libopus` (CPU, `-crf 
 - **quick-xml is pinned at 0.37.** From 0.38 on, entities arrive as separate `GeneralRef` events, which is more machinery than a small XML↔data adapter needs.
 - **serde_json uses `preserve_order`.** Without it, JSON objects come out with alphabetical keys, so CSV→JSON would scramble the column order.
 - **Part files are named `<name>.omni-part.<ext>`.** Keeping the real extension lets ffmpeg and pandoc infer the output container, and the infix still makes partial files obvious. They're deleted on failure or cancel.
+- **Crash journal (`queue/journal.rs`).** A hard kill or crash runs none of our code. The Job Object still kills ffmpeg, but the part file would stay on disk. So in-flight part paths are written to `%LOCALAPPDATA%\com.omniconvert.app\inflight.journal`, and the next launch deletes them. Only paths containing `.omni-part` are ever deleted. Verified by force-killing the app mid-encode and relaunching.
 - **The `ico` crate was dropped.** `image`'s `IcoEncoder::encode_images` already writes multi-size icons.
 - **The fetch script runs on Windows PowerShell 5.1** (`pwsh` isn't installed). It is trust-on-first-use: `-UpdateLock` resolves the releases and records their SHA-256 hashes in `scripts/sidecars.lock.json`, and later runs check against those hashes.
 

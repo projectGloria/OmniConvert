@@ -1,6 +1,8 @@
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use crate::gpu::GpuCaps;
+use crate::queue::journal::Journal;
 use crate::queue::JobQueue;
 use crate::sidecar::Tools;
 
@@ -14,8 +16,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(tools: Tools) -> Self {
-        Self { queue: Arc::new(JobQueue::new()), tools: Arc::new(tools), gpu: Arc::default() }
+    /// `data_dir`: app-local data folder for the crash journal (swept on construction).
+    pub fn new(tools: Tools, data_dir: Option<&Path>) -> Self {
+        Self { queue: Arc::new(JobQueue::new(Journal::open(data_dir))), tools: Arc::new(tools), gpu: Arc::default() }
     }
 
     pub fn gpu_snapshot(&self) -> GpuCaps {

@@ -144,5 +144,13 @@ try {
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }
 
-$lock | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 $LockPath
+# Stable key order + no BOM (5.1's Set-Content -Encoding UTF8 writes one) => clean diffs.
+$out = [ordered]@{}
+foreach ($n in $Sources.Keys) {
+    if ($lock.ContainsKey($n)) {
+        $e = $lock[$n]
+        $out[$n] = [ordered]@{ version = $e.version; file = $e.file; url = $e.url; sha256 = $e.sha256 }
+    }
+}
+[IO.File]::WriteAllText($LockPath, ($out | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding $false))
 Write-Host "Done. Lock file: $LockPath"

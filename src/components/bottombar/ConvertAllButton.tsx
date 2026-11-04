@@ -15,7 +15,8 @@ export function ConvertAllButton() {
     }, 0),
   );
   const active = useQueue((s) => s.order.reduce((n, id) => (ACTIVE.has(s.items[id]?.status ?? "idle") ? n + 1 : n), 0));
-  const total = useQueue((s) => s.order.length);
+  // Tooltip only makes sense if something is actually missing a target (not when all are done).
+  const untargeted = useQueue((s) => s.order.some((id) => !s.items[id]?.target));
 
   if (active > 0 && ready === 0) {
     return (
@@ -36,7 +37,7 @@ export function ConvertAllButton() {
       type="button"
       disabled={disabled}
       onClick={() => void convertAll()}
-      title={disabled && total > 0 ? "Pick a target format first" : undefined}
+      title={disabled && untargeted ? "Pick a target format first" : undefined}
       className="flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset] transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-muted disabled:shadow-none"
     >
       Convert {ready > 0 ? ready : "All"}

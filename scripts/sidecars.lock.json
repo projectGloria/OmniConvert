@@ -1,0 +1,26 @@
+{
+    "ffmpeg":  {
+                   "version":  "autobuild-2026-11-04-12-51",
+                   "file":  "ffmpeg-n9.0.2-47-gb204e94e90-win64-gpl-9.0.zip",
+                   "url":  "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-04-12-51/ffmpeg-n9.0.2-47-gb204e94e90-win64-gpl-9.0.zip",
+                   "sha256":  "db2867364898bf8b68f5404b998165dfd8d31c9bfabc2a35d6e0c941bf33c1ea"
+               },
+    "pandoc":  {
+                   "version":  "3.13",
+                   "file":  "pandoc-3.13-windows-x86_64.zip",
+                   "url":  "https://github.com/jgm/pandoc/releases/download/3.13/pandoc-3.13-windows-x86_64.zip",
+                   "sha256":  "23e1f2e978a3df80db8bf65c9c59534f41a23140480cfb4f783a882ab7dc6a4e"
+               },
+    "typst":  {
+                  "version":  "v0.15.1",
+                  "file":  "typst-x86_64-pc-windows-msvc.zip",
+                  "url":  "https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip",
+                  "sha256":  "19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736"
+              },
+    "pdfium":  {
+                   "version":  "chromium/8138",
+                   "file":  "pdfium-win-x64.tgz",
+                   "url":  "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8138/pdfium-win-x64.tgz",
+                   "sha256":  "8d48973e3eb472dda0f5f2435e595ac043f9f2219dd71883392f549445afa8a5"
+               }
+}

@@ -11,6 +11,7 @@ use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 
 use super::job::{CompleteEvent, ErrorEvent, JobRequest};
+use super::journal::Journal;
 use super::output;
 use super::progress::{ProgressSink, TauriSink};
 use crate::engines::error::EngineError;
@@ -33,10 +34,12 @@ pub struct JobQueue {
     sidecar: Arc<Semaphore>,
     /// Hardware encodes: consumer NVENC caps concurrent sessions per GPU.
     gpu: Arc<Semaphore>,
+    /// Part paths of in-flight jobs, persisted so a crash can be cleaned up next launch.
+    journal: Journal,
 }
 
 impl JobQueue {
-    pub fn new() -> Self {
+    pub fn new(journal: Journal) -> Self {
         let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
         Self {
             root: Mutex::new(CancellationToken::new()),
@@ -45,6 +48,7 @@ impl JobQueue {
             cpu: Arc::new(Semaphore::new((cores / 2).max(1))),
             sidecar: Arc::new(Semaphore::new(2)),
             gpu: Arc::new(Semaphore::new(2)),
+            journal,
         }
     }
 
@@ -130,6 +134,7 @@ impl JobQueue {
             }
         };
 
+        self.journal.add(&out.part_path);
         let spec = ConvertSpec { input, src, target: req.target, output: out.part_path.clone(), settings: req.settings };
         let ctx = JobCtx { cancel: token.clone(), progress: sink, tools, gpu };
         // Inner spawn = panic isolation: a panicking engine becomes a JoinError here
@@ -143,6 +148,7 @@ impl JobQueue {
 
         match result {
             Ok(path) => {
+                self.journal.remove(&out.part_path);
                 let _ = app.emit(
                     "conversion://complete",
                     CompleteEvent {
@@ -154,6 +160,7 @@ impl JobQueue {
             }
             Err(e) => {
                 output::discard(&out);
+                self.journal.remove(&out.part_path);
                 // Library errors raised *because* we cancelled (CancelReader) still count as cancel.
                 let cancelled = matches!(e, EngineError::Cancelled) || token.is_cancelled();
                 emit_error(app, &req.job_id, if cancelled { "cancelled".into() } else { e.to_string() }, cancelled);

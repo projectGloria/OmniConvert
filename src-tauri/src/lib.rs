@@ -19,7 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let tools = Tools::discover(app.path().resource_dir().ok().as_deref());
-            let state = AppState::new(tools);
+            let state = AppState::new(tools, app.path().app_local_data_dir().ok().as_deref());
             let (tools, gpu) = (state.tools.clone(), state.gpu.clone());
             app.manage(state);
 
