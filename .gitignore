@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.log
+
+# Rust
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Sidecars & native libs — fetched by scripts/fetch-sidecars.ps1, never committed
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+src-tauri/resources/*
+!src-tauri/resources/.gitkeep
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

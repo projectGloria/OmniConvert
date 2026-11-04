@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Obsidian palette as Tailwind v4 theme tokens → generates bg-base, text-ink, border-line, etc. */
+@theme {
+  --color-base: #09090b;
+  --color-surface: #121215;
+  --color-raised: #18181c;
+  --color-line: #1e1e24;
+  --color-ink: #ededef;
+  --color-muted: #8e8e93;
+  --color-accent: #6366f1;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+
+  /* System fonts only: offline app, no webfont fetches. Segoe UI Variable ships with Win11. */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden; /* the window is the viewport; only inner panes scroll */
+  }
+
+  body {
+    @apply bg-base text-ink font-sans antialiased;
+    /* Desktop-app feel: chrome text isn't selectable like a web page. */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+
+  input,
+  textarea {
+    user-select: text;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Thin dark scrollbars (WebView2 = Chromium, so ::-webkit-scrollbar applies). */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #2a2a32;
+  }
+}
