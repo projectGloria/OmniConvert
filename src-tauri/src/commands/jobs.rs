@@ -1,6 +1,6 @@
 use tauri::{AppHandle, State};
 
-use crate::queue::job::JobRequest;
+use crate::queue::job::{JobRequest, MergeRequest};
 use crate::state::AppState;
 
 /// Fire-and-forget: returns immediately; outcomes arrive as `conversion://*` events.
@@ -12,6 +12,12 @@ pub fn enqueue_jobs(app: AppHandle, state: State<'_, AppState>, jobs: Vec<JobReq
     for job in jobs {
         state.queue.enqueue(app.clone(), job, state.tools.clone(), gpu.clone());
     }
+}
+
+/// "Merge to PDF": one job, one row, one output. Same event contract as enqueue_jobs.
+#[tauri::command]
+pub fn enqueue_merge(app: AppHandle, state: State<'_, AppState>, req: MergeRequest) {
+    state.queue.enqueue_merge(app, req, state.tools.clone(), state.gpu_snapshot());
 }
 
 #[tauri::command]

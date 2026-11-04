@@ -78,6 +78,11 @@ pub async fn execute(spec: ConvertSpec, ctx: JobCtx) -> EngineResult<()> {
     }
 }
 
+/// "Merge to PDF" (one job, many inputs) — see engines::image::merge.
+pub async fn merge_pdf(inputs: Vec<(PathBuf, Format)>, settings: JobSettings, out: PathBuf, ctx: JobCtx) -> EngineResult<()> {
+    blocking(ctx, move |c| image::merge::merge_pdf(&inputs, &settings, &out, &c)).await
+}
+
 async fn blocking<F>(ctx: JobCtx, f: F) -> EngineResult<()>
 where
     F: FnOnce(JobCtx) -> EngineResult<()> + Send + 'static,

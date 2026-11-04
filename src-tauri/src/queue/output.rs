@@ -26,7 +26,7 @@ pub fn plan(
     target: TargetKind,
     out_dir: Option<&Path>,
     taken: impl Fn(&Path) -> bool,
-) -> io::Result<PlannedOutput> {
+) -> PlannedOutput {
     let dir = match out_dir {
         Some(d) => d.to_path_buf(),
         None => input.parent().map(Path::to_path_buf).unwrap_or_default(),
@@ -42,14 +42,24 @@ pub fn plan(
         TargetKind::Extract => ("", None, true),
     };
 
-    let base = format!("{stem}{suffix}");
-    let final_path = unique_path(&dir, &base, ext, &taken);
+    named(&dir, &format!("{stem}{suffix}"), ext, is_dir, &taken)
+}
+
+/// Output for "Merge to PDF": `<first image stem>_merged.pdf`, next to the first image
+/// unless an output folder is set.
+pub fn plan_merge(first: &Path, out_dir: Option<&Path>, taken: impl Fn(&Path) -> bool) -> PlannedOutput {
+    let dir = out_dir.map_or_else(|| first.parent().map(Path::to_path_buf).unwrap_or_default(), Path::to_path_buf);
+    named(&dir, &format!("{}_merged", file_stem(first)), Some("pdf"), false, &taken)
+}
+
+fn named(dir: &Path, base: &str, ext: Option<&str>, is_dir: bool, taken: &impl Fn(&Path) -> bool) -> PlannedOutput {
+    let final_path = unique_path(dir, base, ext, taken);
     let final_name = final_path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let part_name = match ext {
         Some(e) => format!("{}.omni-part.{e}", final_name.trim_end_matches(&format!(".{e}"))),
         None => format!("{final_name}.omni-part"),
     };
-    Ok(PlannedOutput { part_path: dir.join(part_name), final_path, is_dir })
+    PlannedOutput { part_path: dir.join(part_name), final_path, is_dir }
 }
 
 /// File stem without compound archive suffixes: `backup.tar.gz` → `backup`.
@@ -83,6 +93,18 @@ pub fn finalize(out: &PlannedOutput) -> io::Result<PathBuf> {
     Ok(out.final_path.clone())
 }
 
+/// Bytes on disk for a finished output; directory outputs (PDF pages, extracts) are
+/// summed recursively. Best-effort: unreadable entries count as 0.
+pub fn size_of(path: &Path) -> u64 {
+    match fs::metadata(path) {
+        Ok(m) if m.is_dir() => fs::read_dir(path)
+            .map(|rd| rd.flatten().map(|e| size_of(&e.path())).sum())
+            .unwrap_or(0),
+        Ok(m) => m.len(),
+        Err(_) => 0,
+    }
+}
+
 /// Best-effort removal of a failed/cancelled part output.
 pub fn discard(out: &PlannedOutput) {
     let _ = if out.is_dir { fs::remove_dir_all(&out.part_path) } else { fs::remove_file(&out.part_path) };
@@ -98,16 +120,16 @@ mod tests {
         let input = dir.path().join("clip.mp4");
         fs::write(&input, b"x").unwrap();
 
-        let p = plan(&input, Format::Mp4, TargetKind::Convert(Format::Mp3), None, |_| false).unwrap();
+        let p = plan(&input, Format::Mp4, TargetKind::Convert(Format::Mp3), None, |_| false);
         assert_eq!(p.final_path, dir.path().join("clip.mp3"));
         assert_eq!(p.part_path, dir.path().join("clip.omni-part.mp3"));
 
         fs::write(dir.path().join("clip.mp3"), b"taken").unwrap();
-        let p = plan(&input, Format::Mp4, TargetKind::Convert(Format::Mp3), None, |_| false).unwrap();
+        let p = plan(&input, Format::Mp4, TargetKind::Convert(Format::Mp3), None, |_| false);
         assert_eq!(p.final_path, dir.path().join("clip (1).mp3"));
 
         let tgz = dir.path().join("backup.tar.gz");
-        let p = plan(&tgz, Format::Tgz, TargetKind::Extract, None, |_| false).unwrap();
+        let p = plan(&tgz, Format::Tgz, TargetKind::Extract, None, |_| false);
         assert_eq!(p.final_path, dir.path().join("backup"));
         assert!(p.is_dir);
     }

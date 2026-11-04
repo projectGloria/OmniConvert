@@ -16,6 +16,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/cn";
 import type { Target } from "../../types/generated/Target";
+import type { ApplyAllProps } from "./ApplyAllFooter";
 import { FormatPopover } from "./FormatPopover";
 
 interface FormatPillProps {
@@ -24,9 +25,10 @@ interface FormatPillProps {
   /** True while the item is converting: target can't change mid-job. */
   locked?: boolean;
   onSelect: (targetId: string) => void;
+  applyAll?: Omit<ApplyAllProps, "target"> | undefined;
 }
 
-export function FormatPill({ targets, selectedId, locked = false, onSelect }: FormatPillProps) {
+export function FormatPill({ targets, selectedId, locked = false, onSelect, applyAll }: FormatPillProps) {
   const [open, setOpen] = useState(false);
   // Derived on render: no need to store the selected Target object in state.
   const selected = selectedId ? targets.find((t) => t.id === selectedId) : undefined;
@@ -56,7 +58,7 @@ export function FormatPill({ targets, selectedId, locked = false, onSelect }: Fo
   const { getReferenceProps, getFloatingProps } = useInteractions([
     useClick(context),
     useDismiss(context), // Esc + outside click
-    useRole(context, { role: "listbox" }),
+    useRole(context, { role: "dialog" }), // the listbox lives inside, next to the search box
   ]);
 
   return (
@@ -80,7 +82,8 @@ export function FormatPill({ targets, selectedId, locked = false, onSelect }: Fo
 
       {open && (
         <FloatingPortal>
-          {/* modal={false}: no focus trap, Tab-out just closes. Focus moves to the first option on open. */}
+          {/* modal={false}: no focus trap, Tab-out just closes. Focus lands in the search box
+              (autoFocus) and returns to this pill on close — keyboard users never get lost. */}
           <FloatingFocusManager context={context} modal={false}>
             <div ref={refs.setFloating} style={floatingStyles} {...getFloatingProps()} className="z-50">
               <FormatPopover
@@ -90,6 +93,15 @@ export function FormatPill({ targets, selectedId, locked = false, onSelect }: Fo
                   onSelect(id);
                   setOpen(false);
                 }}
+                applyAll={
+                  applyAll && {
+                    ...applyAll,
+                    onApply: (id, overwrite) => {
+                      applyAll.onApply(id, overwrite);
+                      setOpen(false);
+                    },
+                  }
+                }
               />
             </div>
           </FloatingFocusManager>

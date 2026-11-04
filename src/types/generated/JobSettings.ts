@@ -29,4 +29,12 @@ fps?: number,
 /**
  * Rasterization DPI for PDF pages and SVG.
  */
-dpi?: number, };
+dpi?: number, 
+/**
+ * Hz for audio targets (None = keep source rate). Ignored for Opus (48k only).
+ */
+sampleRate?: number, 
+/**
+ * "#rrggbb" that transparent pixels are flattened onto for alpha-less targets (JPG).
+ */
+background?: string, };

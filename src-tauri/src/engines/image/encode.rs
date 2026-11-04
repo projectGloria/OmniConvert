@@ -30,7 +30,7 @@ pub fn encode(img: &DynamicImage, target: Format, settings: &JobSettings, out: &
             .write_to(&mut w, ImageFormat::Gif)
             .map_err(EngineError::encode)?,
         Format::Jpg => JpegEncoder::new_with_quality(&mut w, quality)
-            .encode_image(&flatten(img))
+            .encode_image(&flatten(img, settings.background_rgb()))
             .map_err(EngineError::encode)?,
         Format::Webp => {
             let rgba = img.to_rgba8();
@@ -51,9 +51,9 @@ pub fn encode(img: &DynamicImage, target: Format, settings: &JobSettings, out: &
     Ok(())
 }
 
-/// JPEG has no alpha: composite onto white instead of letting transparent pixels
-/// collapse to black (what a naive `to_rgb8()` does).
-fn flatten(img: &DynamicImage) -> RgbImage {
+/// JPEG has no alpha: composite onto `bg` (white by default) instead of letting
+/// transparent pixels collapse to black (what a naive `to_rgb8()` does).
+fn flatten(img: &DynamicImage, bg: [u8; 3]) -> RgbImage {
     if !img.color().has_alpha() {
         return img.to_rgb8();
     }
@@ -61,8 +61,8 @@ fn flatten(img: &DynamicImage) -> RgbImage {
     RgbImage::from_fn(rgba.width(), rgba.height(), |x, y| {
         let Rgba([r, g, b, a]) = *rgba.get_pixel(x, y);
         let a = u16::from(a);
-        let mix = |c: u8| ((u16::from(c) * a + 255 * (255 - a)) / 255) as u8;
-        image::Rgb([mix(r), mix(g), mix(b)])
+        let mix = |c: u8, under: u8| ((u16::from(c) * a + u16::from(under) * (255 - a)) / 255) as u8;
+        image::Rgb([mix(r, bg[0]), mix(g, bg[1]), mix(b, bg[2])])
     })
 }
 

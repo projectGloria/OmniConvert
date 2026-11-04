@@ -1,25 +1,10 @@
-import { open } from "@tauri-apps/plugin-dialog";
 import { FileStack } from "lucide-react";
-import { probeFiles } from "../../lib/ipc";
-import { useQueue } from "../../store/queueStore";
+import { browse } from "../../lib/ingest";
 
 const DOMAINS = ["Video", "Audio", "Image", "Document", "Data", "Archive"] as const;
 
 export function EmptyState() {
-  const addFiles = useQueue((s) => s.addFiles);
-
-  // Fallback for users who don't drag-drop. Same Rust probe path as a drop,
-  // so there's exactly one code path for "files enter the queue".
-  const browse = async () => {
-    const picked = await open({ multiple: true, directory: false });
-    if (!picked || picked.length === 0) return;
-    try {
-      addFiles(await probeFiles(picked));
-    } catch (err) {
-      console.error("probe_files failed", err);
-    }
-  };
-
+  // Fallback for users who don't drag-drop. Same ingest() path as a drop and Ctrl+O.
   return (
     <div className="grid h-full place-items-center p-6">
       <div className="flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border border-dashed border-line px-8 py-12 text-center">
@@ -37,6 +22,9 @@ export function EmptyState() {
         >
           Browse files
         </button>
+        <p className="text-[11px] text-muted/70">
+          <kbd className="font-sans">Ctrl+O</kbd> add · <kbd className="font-sans">Ctrl+Enter</kbd> convert
+        </p>
         <ul className="flex flex-wrap justify-center gap-1.5">
           {DOMAINS.map((d) => (
             <li key={d} className="rounded-full border border-line px-2.5 py-0.5 text-[11px] text-muted">

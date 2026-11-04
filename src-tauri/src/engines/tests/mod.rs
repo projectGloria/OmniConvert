@@ -4,6 +4,7 @@
 mod archive;
 mod data;
 mod image;
+mod merge;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

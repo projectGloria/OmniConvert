@@ -31,7 +31,7 @@ export function useConversionEvents(): void {
     keep(
       listen<CompleteEvent>("conversion://complete", ({ payload }) => {
         useProgress.getState().setProgress(payload.jobId, { value: 1, stage: "Done" });
-        useQueue.getState().setStatus(payload.jobId, "done", { output: payload.output });
+        useQueue.getState().setStatus(payload.jobId, "done", { output: payload.output, outputBytes: payload.outputBytes });
       }),
     );
     keep(
@@ -39,7 +39,10 @@ export function useConversionEvents(): void {
         useProgress.getState().drop(payload.jobId);
         useQueue
           .getState()
-          .setStatus(payload.jobId, payload.cancelled ? "cancelled" : "error", { error: payload.message });
+          .setStatus(payload.jobId, payload.cancelled ? "cancelled" : "error", {
+            error: payload.message,
+            errorDetail: payload.detail,
+          });
       }),
     );
 

@@ -37,6 +37,15 @@ impl EngineError {
     pub fn encode(e: impl std::fmt::Display) -> Self {
         Self::Encode(e.to_string())
     }
+
+    /// (row message, expandable detail). Tool failures keep the stderr tail out of the
+    /// one-line row text — a 600-char ffmpeg dump truncated to "ffmpeg failed (exit 1): [h264 @ 0x…" helps nobody.
+    pub fn into_parts(self) -> (String, Option<String>) {
+        match self {
+            Self::Tool { tool, code, tail } if !tail.is_empty() => (format!("{tool} failed (exit {code})"), Some(tail)),
+            other => (other.to_string(), None),
+        }
+    }
 }
 
 pub type EngineResult<T> = Result<T, EngineError>;

@@ -458,6 +458,15 @@ The container decides the codec. WEBM forces `libvpx-vp9`/`libopus` (CPU, `-crf 
 
 **Exit check:** typecheck ✓, `cargo check` ✓, the full 3-click flow works by keyboard only.
 
+**As built (Phase 4):**
+- GPU presets are **not disabled** without a GPU encoder: Rust falls back to x264 veryfast/medium, and forcing Archival (x265 slow) on GPU-less machines is the worst outcome. The preset chip shows what will actually run instead ("GPU · NVENC", "CPU · x265", "CPU · VP9").
+- "Open output folder" uses `revealItemInDir(firstOutput)`, not `openPath(dir)`, because `opener:allow-open-path` would need a `**` scope.
+- Merge to PDF = `enqueue_merge` (one job, one row). `PdfBuilder` streams pages so only one decoded bitmap is held at a time. AVIF is excluded (it needs an ffmpeg decode), and merges are capped at 500 pages.
+- `ErrorEvent.detail` carries the sidecar stderr tail for the expandable panel. `CompleteEvent.outputBytes` feeds the batch summary.
+- New settings: `sampleRate` (ignored for Opus, which is 48k-only) and `background` (JPG alpha flatten).
+- The settings schema (`lib/settingsSchema.ts`) drives the drawer fields, the displayed defaults and stale-key pruning on retarget.
+- Hotkeys: Ctrl+O, Ctrl+Enter, Ctrl+A, Del, Esc, Space (toggle a row), ↑/↓ (move between rows), and Alt(+Shift)+Enter in the picker (apply to all).
+
 ---
 
 ## Phase 5 — Verification & Self-Contained Windows Build

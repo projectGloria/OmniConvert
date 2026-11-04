@@ -43,6 +43,28 @@ pub struct JobSettings {
     /// Rasterization DPI for PDF pages and SVG.
     #[ts(optional)]
     pub dpi: Option<u32>,
+    /// Hz for audio targets (None = keep source rate). Ignored for Opus (48k only).
+    #[ts(optional)]
+    pub sample_rate: Option<u32>,
+    /// "#rrggbb" that transparent pixels are flattened onto for alpha-less targets (JPG).
+    #[ts(optional)]
+    pub background: Option<String>,
+}
+
+impl JobSettings {
+    /// Parsed `background`, white when unset or malformed. Malformed is not an error:
+    /// the UI only ever sends a colour picker value, so garbage means a stale client.
+    pub fn background_rgb(&self) -> [u8; 3] {
+        let parse = |hex: &str| -> Option<[u8; 3]> {
+            let h = hex.strip_prefix('#')?;
+            if h.len() != 6 {
+                return None;
+            }
+            let byte = |i: usize| u8::from_str_radix(h.get(i..i + 2)?, 16).ok();
+            Some([byte(0)?, byte(2)?, byte(4)?])
+        };
+        self.background.as_deref().and_then(parse).unwrap_or([255, 255, 255])
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -67,6 +89,22 @@ pub struct CompleteEvent {
     pub output: String,
     #[ts(type = "number")]
     pub elapsed_ms: u64,
+    /// Size of the output (summed for directory outputs) — feeds the batch summary.
+    #[ts(type = "number")]
+    pub output_bytes: u64,
+}
+
+/// "Merge to PDF": many images → one PDF, run as a single queue job.
+#[derive(Debug, Clone, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MergeRequest {
+    pub job_id: String,
+    /// Page order = array order.
+    pub paths: Vec<String>,
+    pub output_dir: Option<String>,
+    #[serde(default)]
+    pub settings: JobSettings,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -75,6 +113,8 @@ pub struct CompleteEvent {
 pub struct ErrorEvent {
     pub job_id: String,
     pub message: String,
+    /// Sidecar stderr tail when a tool failed — shown in an expandable panel, not inline.
+    pub detail: Option<String>,
     /// True when the user cancelled — the UI shows "Cancelled", not an error.
     pub cancelled: bool,
 }

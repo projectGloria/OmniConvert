@@ -13,3 +13,13 @@ export function shortPath(path: string): string {
   const parts = path.split(/[\\/]/).filter(Boolean);
   return parts.length <= 2 ? path : `…\\${parts.slice(-2).join("\\")}`;
 }
+
+/** 102_000 → "1m 42s", 2_400 → "2.4s". Wall-clock durations for the batch summary. */
+export function formatDuration(ms: number): string {
+  if (ms < 10_000) return `${(ms / 1000).toFixed(1)}s`;
+  const s = Math.round(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}

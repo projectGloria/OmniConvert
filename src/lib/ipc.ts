@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { FileInfo } from "../types/generated/FileInfo";
 import type { GpuCaps } from "../types/generated/GpuCaps";
 import type { JobRequest } from "../types/generated/JobRequest";
+import type { MergeRequest } from "../types/generated/MergeRequest";
 import type { ToolStatus } from "../types/generated/ToolStatus";
 
 // Typed wrappers around invoke(). Components never call invoke() with raw strings,
@@ -12,6 +13,9 @@ export const probeFiles = (paths: string[]) => invoke<FileInfo[]>("probe_files",
 
 /** Fire-and-forget; results arrive as conversion://progress|complete|error events. */
 export const enqueueJobs = (jobs: JobRequest[]) => invoke<void>("enqueue_jobs", { jobs });
+
+/** One job, one output PDF; same conversion://* event contract, keyed by req.jobId. */
+export const enqueueMerge = (req: MergeRequest) => invoke<void>("enqueue_merge", { req });
 
 export const cancelJob = (jobId: string) => invoke<void>("cancel_job", { jobId });
 

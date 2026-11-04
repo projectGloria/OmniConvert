@@ -1,6 +1,7 @@
 //! Native image engine: decode (image / resvg) → optional resize → encode.
 
 mod encode;
+pub mod merge;
 pub mod pdf;
 mod svg;
 

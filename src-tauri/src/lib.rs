@@ -37,6 +37,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::probe::probe_files,
             commands::jobs::enqueue_jobs,
+            commands::jobs::enqueue_merge,
             commands::jobs::cancel_job,
             commands::jobs::cancel_all,
             commands::system::gpu_caps,

@@ -1,5 +1,5 @@
 //! Images → PDF with lopdf (PLAN D6). One page per image, page size = image size at 96 DPI.
-//! Takes a list so Phase 4's "Merge to PDF" batch action reuses it unchanged.
+//! `PdfBuilder` streams pages in, which is what "Merge to PDF" (engines::image::merge) uses.
 
 use std::io::Write;
 use std::path::Path;
@@ -23,13 +23,34 @@ pub enum PdfImage {
 /// same physical size a browser would print it at.
 const PX_TO_PT: f32 = 0.75;
 
+/// One-shot helper for the single-image route.
 pub fn write(images: Vec<PdfImage>, out: &Path) -> EngineResult<()> {
-    let mut doc = Document::with_version("1.7");
-    let pages_id = doc.new_object_id();
-    let mut kids: Vec<Object> = Vec::with_capacity(images.len());
-
+    let mut b = PdfBuilder::new();
     for img in images {
-        let (w, h, xobject) = image_xobject(&mut doc, img)?;
+        b.add(img)?;
+    }
+    b.save(out)
+}
+
+/// Incremental writer: each page is compressed into the document as it is added, so
+/// a 200-image merge holds one decoded bitmap at a time, not 200 (≈33 MB each at 4K).
+pub struct PdfBuilder {
+    doc: Document,
+    pages_id: ObjectId,
+    kids: Vec<Object>,
+}
+
+impl PdfBuilder {
+    pub fn new() -> Self {
+        let mut doc = Document::with_version("1.7");
+        let pages_id = doc.new_object_id();
+        Self { doc, pages_id, kids: Vec::new() }
+    }
+
+    /// Consumes `img`: its pixels are dropped as soon as they are Flate-compressed.
+    pub fn add(&mut self, img: PdfImage) -> EngineResult<()> {
+        let doc = &mut self.doc;
+        let (w, h, xobject) = image_xobject(doc, img)?;
         let (pw, ph) = (w as f32 * PX_TO_PT, h as f32 * PX_TO_PT);
 
         // Content stream: scale the unit-square image to the full page and paint it.
@@ -44,21 +65,24 @@ pub fn write(images: Vec<PdfImage>, out: &Path) -> EngineResult<()> {
         let content_id = doc.add_object(Stream::new(dictionary! {}, content.encode().map_err(EngineError::encode)?));
         let page_id = doc.add_object(dictionary! {
             "Type" => "Page",
-            "Parent" => pages_id,
+            "Parent" => self.pages_id,
             "MediaBox" => vec![0.into(), 0.into(), pw.into(), ph.into()],
             "Contents" => content_id,
             "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => xobject } },
         });
-        kids.push(page_id.into());
+        self.kids.push(page_id.into());
+        Ok(())
     }
 
-    let count = kids.len() as i64;
-    doc.objects.insert(pages_id, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => kids, "Count" => count }));
-    let catalog_id = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
-    doc.trailer.set("Root", catalog_id);
-
-    doc.save(out).map_err(EngineError::encode)?;
-    Ok(())
+    pub fn save(mut self, out: &Path) -> EngineResult<()> {
+        let count = self.kids.len() as i64;
+        let pages = dictionary! { "Type" => "Pages", "Kids" => self.kids, "Count" => count };
+        self.doc.objects.insert(self.pages_id, Object::Dictionary(pages));
+        let catalog_id = self.doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => self.pages_id });
+        self.doc.trailer.set("Root", catalog_id);
+        self.doc.save(out).map_err(EngineError::encode)?;
+        Ok(())
+    }
 }
 
 fn image_xobject(doc: &mut Document, img: PdfImage) -> EngineResult<(u32, u32, ObjectId)> {

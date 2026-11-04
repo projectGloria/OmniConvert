@@ -38,6 +38,11 @@ pub fn build(spec: &ConvertSpec, caps: &GpuCaps) -> EngineResult<Plan> {
             // -vn: drop video; -map_metadata: keep title/artist tags.
             args.extend(s(&["-vn", "-sn", "-map_metadata", "0"]));
             args.extend(presets::audio_args(dst, st.audio_bitrate));
+            // libopus only encodes 48/24/16/12/8 kHz and errors on anything else; without
+            // -ar ffmpeg auto-resamples to 48k, so for Opus the setting is simply ignored.
+            if let (Some(hz), false) = (st.sample_rate, dst == Format::Opus) {
+                args.extend(["-ar".to_owned(), hz.to_string()]);
+            }
         }
         TargetKind::Convert(dst) if dst.category() == Category::Video => {
             let enc = presets::video_encoder(dst, st.preset, caps);

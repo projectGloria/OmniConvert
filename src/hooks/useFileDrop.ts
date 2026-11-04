@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { probeFiles } from "../lib/ipc";
-import { useQueue } from "../store/queueStore";
+import { ingest } from "../lib/ingest";
 
 /**
  * Subscribes to Tauri's *native* drag-drop events (not HTML5 dragenter/drop).
@@ -12,9 +11,6 @@ import { useQueue } from "../store/queueStore";
  */
 export function useFileDrop(): boolean {
   const [hovering, setHovering] = useState(false);
-  // Zustand actions are created once → stable ref, safe as an effect dependency.
-  const addFiles = useQueue((s) => s.addFiles);
-
   useEffect(() => {
     // onDragDropEvent resolves its unlisten fn *asynchronously*. Under StrictMode the
     // effect is torn down before that promise settles, so a naive `return unlisten`
@@ -34,12 +30,7 @@ export function useFileDrop(): boolean {
             break;
           case "drop":
             setHovering(false);
-            if (payload.paths.length === 0) return;
-            try {
-              addFiles(await probeFiles(payload.paths));
-            } catch (err) {
-              console.error("probe_files failed", err); // Phase 4: surface as a toast
-            }
+            await ingest(payload.paths); // empty-paths + error toasts handled there
             break;
           // "over" fires on every mouse move; nothing to do.
         }
@@ -53,7 +44,7 @@ export function useFileDrop(): boolean {
       disposed = true;
       unlisten?.();
     };
-  }, [addFiles]);
+  }, []);
 
   return hovering;
 }

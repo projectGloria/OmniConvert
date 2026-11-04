@@ -2,6 +2,10 @@
 
 export type ErrorEvent = { jobId: string, message: string, 
 /**
+ * Sidecar stderr tail when a tool failed — shown in an expandable panel, not inline.
+ */
+detail: string | null, 
+/**
  * True when the user cancelled — the UI shows "Cancelled", not an error.
  */
 cancelled: boolean, };

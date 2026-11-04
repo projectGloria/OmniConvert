@@ -2,6 +2,7 @@
 
 pub mod job;
 pub mod journal;
+mod merge;
 pub mod output;
 pub mod progress;
 mod runner;

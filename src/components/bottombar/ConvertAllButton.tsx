@@ -1,5 +1,5 @@
 import { ArrowRight, Square } from "lucide-react";
-import { convertAll } from "../../lib/convert";
+import { convert } from "../../lib/convert";
 import { cancelAll } from "../../lib/ipc";
 import { useQueue } from "../../store/queueStore";
 import { ACTIVE, STARTABLE } from "../../types/queue";
@@ -36,8 +36,8 @@ export function ConvertAllButton() {
     <button
       type="button"
       disabled={disabled}
-      onClick={() => void convertAll()}
-      title={disabled && untargeted ? "Pick a target format first" : undefined}
+      onClick={() => void convert()}
+      title={disabled && untargeted ? "Pick a target format first" : "Convert all (Ctrl+Enter)"}
       className="flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset] transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-muted disabled:shadow-none"
     >
       Convert {ready > 0 ? ready : "All"}
