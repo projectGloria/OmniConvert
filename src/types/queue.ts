@@ -1,21 +1,15 @@
-// Phase 1 hand-written mirror of the Rust `ProbedFile` struct.
-// Phase 2 replaces this with ts-rs generated bindings in src/types/generated/.
+import type { FileInfo } from "./generated/FileInfo";
+
+// Wire types (FileInfo, Target, Format, Category…) are generated from Rust by ts-rs —
+// see src/types/generated/ and `npm run bindings`. Only UI-local state lives here.
 
 export type JobId = string;
 
-/** Shape returned by the `probe_files` Tauri command (serde camelCase). */
-export interface ProbedFile {
-  path: string;
-  name: string;
-  ext: string;
-  size: number;
-}
-
 export type ItemStatus = "idle" | "queued" | "running" | "done" | "error" | "cancelled";
 
-export interface QueueItem extends ProbedFile {
+export interface QueueItem extends FileInfo {
   id: JobId;
-  /** Target format id; null until the user picks one (Phase 2 registry). */
+  /** Selected `Target.id`; null until the user picks one. */
   target: string | null;
   status: ItemStatus;
 }

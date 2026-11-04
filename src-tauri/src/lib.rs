@@ -1,4 +1,5 @@
 mod commands;
+mod registry;
 mod error;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

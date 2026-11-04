@@ -3,7 +3,7 @@ name = "omniconvert"
 version = "0.1.0"
 description = "Offline universal file converter"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.85"
 
 # Tauri wants a lib target; main.rs is a 3-line shim that calls lib::run().
 [lib]
@@ -13,15 +13,24 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
-# Phase 1 keeps deps to the shell only. Engine crates (image, calamine, zip, ...)
-# land in Phases 2–3 — pulling rav1e in now would require NASM just to `cargo check`.
+# Engine crates (image, calamine, zip, ...) land in Phase 3 — rav1e (AVIF) needs
+# NASM on PATH, so it's deliberately absent until the image engine exists.
 [dependencies]
+# --- Shell ---
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 thiserror = "2"
+
+# --- Wire types: serde + TS codegen (bindings → src/types/generated via .cargo/config.toml) ---
+serde = { version = "1", features = ["derive"] }
+ts-rs = "12.0.1"
+
+# --- Registry: detection + shape sniffing (also reused by the Phase 3 data engine) ---
+infer = "0.22.0"
+serde_json = "1"
+serde_yaml_ng = "0.10.0" # serde_yaml is archived/unmaintained
+toml = "1.2"
 
 [profile.dev.package."*"]
 opt-level = 2 # deps optimized even in dev; our own crate stays fast to rebuild

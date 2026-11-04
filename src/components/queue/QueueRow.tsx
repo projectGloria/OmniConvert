@@ -1,9 +1,10 @@
 import { memo } from "react";
 import { motion } from "motion/react";
-import { ChevronDown, Settings2, X } from "lucide-react";
+import { Settings2, X } from "lucide-react";
 import { formatBytes } from "../../lib/format";
 import { useQueue } from "../../store/queueStore";
 import type { JobId } from "../../types/queue";
+import { FormatPill } from "../picker/FormatPill";
 import { InputBadge } from "./InputBadge";
 import { ProgressBar } from "./ProgressBar";
 
@@ -14,6 +15,7 @@ import { ProgressBar } from "./ProgressBar";
 export const QueueRow = memo(function QueueRow({ id }: { id: JobId }) {
   const item = useQueue((s) => s.items[id]);
   const remove = useQueue((s) => s.remove);
+  const setTarget = useQueue((s) => s.setTarget);
 
   // Can be undefined for one frame while AnimatePresence plays the exit animation.
   if (!item) return null;
@@ -28,25 +30,25 @@ export const QueueRow = memo(function QueueRow({ id }: { id: JobId }) {
       className="group relative overflow-hidden rounded-lg border border-line bg-surface"
     >
       <div className="flex items-center gap-3 px-3.5 py-3">
-        <InputBadge ext={item.ext} />
+        <InputBadge ext={item.ext} category={item.category} />
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-ink" title={item.path}>
+          {/* w-fit: the title tooltip should trigger on the filename, not the row's empty space. */}
+          <p className="w-fit max-w-full truncate text-sm text-ink" title={item.path}>
             {item.name}
           </p>
-          <p className="text-xs text-muted">{formatBytes(item.size)}</p>
+          <p className="text-xs text-muted">
+            {formatBytes(item.size)}
+            {/* Rust only sets detectedAs when magic bytes overrode the extension — no re-check here. */}
+            {item.detectedAs && (
+              <span className="text-amber-400/80"> · detected as {item.detectedAs.toUpperCase()}</span>
+            )}
+          </p>
         </div>
 
-        {/* Phase 2/4: becomes <FormatPill> backed by the Rust registry. */}
-        <button
-          type="button"
-          disabled
-          className="flex items-center gap-1.5 rounded-md border border-line bg-base px-2.5 py-1 text-xs text-muted disabled:cursor-not-allowed"
-        >
-          Choose format
-          <ChevronDown size={13} />
-        </button>
+        <FormatPill targets={item.targets} selectedId={item.target} onSelect={(t) => setTarget(id, t)} />
 
+        {/* Phase 4: opens the per-item settings drawer. */}
         <button
           type="button"
           disabled

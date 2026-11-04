@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { JobId, ProbedFile, QueueItem } from "../types/queue";
+import type { FileInfo } from "../types/generated/FileInfo";
+import type { JobId, QueueItem } from "../types/queue";
 import { useProgress } from "./progressStore";
 
 interface QueueState {
@@ -8,7 +9,9 @@ interface QueueState {
   /** Display order kept separately — reordering never touches item objects. */
   order: JobId[];
   /** Returns how many files were actually added (duplicates by path are skipped). */
-  addFiles: (files: ProbedFile[]) => number;
+  addFiles: (files: FileInfo[]) => number;
+  /** Pass null to clear. Ignores ids Rust didn't offer for this file. */
+  setTarget: (id: JobId, targetId: string | null) => void;
   remove: (id: JobId) => void;
   clear: () => void;
 }
@@ -39,6 +42,15 @@ export const useQueue = create<QueueState>()((set, get) => ({
     if (added > 0) set({ items: nextItems, order: nextOrder });
     return added;
   },
+
+  setTarget: (id, targetId) =>
+    set((s) => {
+      const item = s.items[id];
+      if (!item || item.target === targetId) return s; // same state ref → no subscriber fires
+      // Guard against stale UI: the Rust matrix is the authority on what's legal.
+      if (targetId !== null && !item.targets.some((t) => t.id === targetId)) return s;
+      return { items: { ...s.items, [id]: { ...item, target: targetId } } };
+    }),
 
   remove: (id) => {
     set((s) => {
