@@ -12,10 +12,9 @@ pub trait ProgressSink: Send + Sync {
     fn report(&self, fraction: Option<f32>, stage: &str);
 }
 
-/// Swallows everything. Used by engine tests.
-#[cfg(test)]
+/// Swallows everything. Used by engine tests and the e2e testkit — not cfg(test)-gated
+/// because `tests/` links the lib as a normal (non-test) build.
 pub struct NullSink;
-#[cfg(test)]
 impl ProgressSink for NullSink {
     fn report(&self, _: Option<f32>, _: &str) {}
 }

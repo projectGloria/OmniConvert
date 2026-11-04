@@ -9,6 +9,16 @@
     ],
     "resources": {
       "resources/pdfium.dll": "pdfium.dll"
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller", "silent": true },
+      "nsis": {
+        "installMode": "perMachine",
+        "compression": "lzma"
+      },
+      "wix": {
+        "language": "en-US"
+      }
     }
   }
 }

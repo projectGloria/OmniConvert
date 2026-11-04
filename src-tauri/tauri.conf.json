@@ -33,6 +33,10 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
+    "publisher": "projectGloria",
+    "category": "Utility",
+    "shortDescription": "Offline universal file converter",
+    "longDescription": "Convert video, audio, images, documents, spreadsheets, data and archives entirely on your machine. No uploads, no network.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

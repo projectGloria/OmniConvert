@@ -1,0 +1,8 @@
+[env]
+# ts-rs writes generated TS bindings straight into the frontend tree.
+# Lives at the repo root, not src-tauri/: Cargo discovers config by walking up from the
+# *current directory* (not --manifest-path), so a src-tauri/.cargo/ was silently skipped
+# by every `npm run` script (cwd = root) and ts-rs fell back to src-tauri/bindings/.
+# From the root this file is found directly; from src-tauri/ it's found as an ancestor.
+# relative = true resolves against the repo root (the dir holding .cargo/).
+TS_RS_EXPORT_DIR = { value = "src/types/generated", relative = true }

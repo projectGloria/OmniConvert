@@ -2,7 +2,9 @@
 //! Pandoc can't read PDF, so this is everything PDF-as-input honestly supports.
 
 use std::fs::{self, File};
-use std::io::{BufWriter, Write};
+use std::io::{self, BufWriter, Write};
+use std::path::Path;
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 use image::codecs::jpeg::JpegEncoder;
 use image::ImageFormat;
@@ -14,12 +16,30 @@ use crate::registry::{Format, TargetKind};
 
 const DEFAULT_DPI: u32 = 150;
 
+/// One pdfium instance for the whole process. pdfium-render keeps its bindings in a
+/// global OnceCell and `bind_to_library` *errors* (AlreadyInitialized) on every call
+/// after the first — binding per job made every PDF job after the first one fail.
+static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
+/// Serializes the first bind. Not `OnceLock::get_or_try_init` (unstable): a failed load
+/// (dll missing mid-session) must stay retryable instead of being cached forever.
+static BIND: Mutex<()> = Mutex::new(());
+
+fn pdfium(dll: &Path) -> EngineResult<&'static Pdfium> {
+    if let Some(p) = PDFIUM.get() {
+        return Ok(p); // hot path: no lock once bound
+    }
+    let _guard = BIND.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(p) = PDFIUM.get() {
+        return Ok(p); // another job bound it while we waited
+    }
+    let bindings = Pdfium::bind_to_library(dll).map_err(|e| io::Error::other(format!("pdfium.dll failed to load: {e}")))?;
+    // `thread_safe` (a default feature) makes Pdfium Send + Sync: calls are serialized
+    // behind pdfium-render's own mutex, which pdfium (not thread-safe itself) requires.
+    Ok(PDFIUM.get_or_init(|| Pdfium::new(bindings)))
+}
+
 pub fn convert(spec: &ConvertSpec, ctx: &JobCtx) -> EngineResult<()> {
-    // pdfium-render keeps the bound library in a process-wide OnceLock, so binding
-    // per job is cheap after the first call.
-    let bindings = Pdfium::bind_to_library(ctx.tools.pdfium()?).map_err(EngineError::decode)?;
-    let pdfium = Pdfium::new(bindings);
-    let doc = pdfium.load_pdf_from_file(&spec.input, None).map_err(EngineError::decode)?;
+    let doc = pdfium(ctx.tools.pdfium()?)?.load_pdf_from_file(&spec.input, None).map_err(EngineError::decode)?;
     let pages = doc.pages();
     let count = (pages.len() as f32).max(1.0);
 

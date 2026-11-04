@@ -1,4 +1,0 @@
-[env]
-# ts-rs writes generated TS bindings straight into the frontend tree.
-# relative = true resolves the path against src-tauri/ (the dir holding .cargo/).
-TS_RS_EXPORT_DIR = { value = "../src/types/generated", relative = true }

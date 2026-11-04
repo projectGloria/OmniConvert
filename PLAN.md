@@ -500,6 +500,33 @@ The container decides the codec. WEBM forces `libvpx-vp9`/`libopus` (CPU, `-crf 
 - **Expected installer size: roughly 350–450 MB**, mostly ffmpeg (~80–130 MB depending on the build), pandoc (~150 MB+) and WebView2. That's the cost of "universal + offline", and Phase 5 measures it rather than guessing.
 - Final smoke test: install the NSIS build on a machine/VM with the **network adapter disabled**, then convert one file per domain.
 
+**As built (Phase 5):**
+- **The e2e suite found a real bug.** pdfium-render keeps its bindings in a global `OnceCell`, and `bind_to_library` returns `AlreadyInitialized` on every call after the first. Binding once per job therefore failed every PDF job after the first one in an app session. Unit tests ran one PDF job each, so they never saw it. `engines/pdf.rs` now holds one `static PDFIUM: OnceLock<Pdfium>`, with the first bind behind a mutex so a failed load can be retried. The regression test is `markdown_to_pdf_then_pdfium_reads_it_back`, which runs two pdfium jobs in one process.
+- **`src/testkit.rs` (`#[doc(hidden)] pub mod`).** Integration tests link the lib as an external crate, so they can't see private modules. Rather than making the engine tree `pub`, which would also silence dead-code lints, testkit re-exports the few types the tests need and adds `Harness::convert`. It runs the same path as `JobQueue` (re-detect → matrix check → `output::plan` → engine → `finalize`) without Tauri. A route test therefore also proves the picker would offer that route. `NullSink` is no longer `cfg(test)`-gated, because `tests/` builds the lib without `cfg(test)`.
+- **Suite layout:** `tests/e2e_routes/main.rs` plus `fixtures.rs`, `check.rs`, `native.rs` and `sidecar.rs`. The `main.rs` form keeps helper modules from each compiling as an empty test binary.
+  - **Assertions:** `check::assert_output` checks the magic bytes and that our own detector re-detects the output.
+  - **Native routes:** 9 always-run route tests (CSV↔JSON rows, JSON↔YAML values, JSON → every tabular/tree format, XLSX read-back, MD table → CSV, PNG → every image target + PDF, lossless WebP pixel round-trip, ZIP → 7z/tar/tgz/txz → extract byte-identical, matrix refusal).
+  - **Sidecar routes:** 5 `#[ignore]`d tests (WAV→FLAC→WAV sample-exact, MP3/Opus/Ogg, MD→DOCX with `<w:tbl>`, MD→HTML, MD→PDF→TXT/PNG).
+  - Video routes aren't e2e-tested: generating a video fixture would itself need ffmpeg. They were covered live in Phases 3–4.
+- **`scripts/check-loc.ps1`** also scans `src-tauri/tests`, skips `src/types/generated`, and prints the 5 largest files so creep shows up before it fails.
+- **npm scripts:** `check:loc`, `lint:rs` (clippy `--all-targets -D warnings`), `test:rs`, `test:e2e`, and `verify` (typecheck + loc + clippy + tests).
+- **Measured installers** (`npm run tauri:build`, 13 min release compile with fat LTO):
+
+  | Bundle | Size | Notes |
+  |---|---|---|
+  | NSIS `OmniConvert_0.1.0_x64-setup.exe` | **345 MiB** | LZMA |
+  | MSI `OmniConvert_0.1.0_x64_en-US.msi` | **401 MiB** | WiX cabinet compression |
+
+  - **Payload before compression:** ffmpeg 158 MiB, ffprobe 158 MiB, pandoc 228 MiB, typst 50 MiB, app 19 MiB, pdfium 7.5 MiB, plus the WebView2 offline installer (~130 MiB).
+  - **Biggest lever:** ffprobe is a second static 158 MiB binary for duration/stream probing. Using `ffmpeg -i` parsing, or a shared-lib ffmpeg build, would remove most of that.
+- **Release smoke test.** Done from `target/release`, which has the same layout as an install: triple-stripped sidecars next to the exe and `pdfium.dll` beside it.
+  - One file per domain (MP4→MKV, WAV→MP3, PNG→WebP, MD→PDF, PDF→TXT, CSV→JSON, ZIP→7z) all converted in one 6.6 s batch under the production CSP.
+  - A second PDF job in the same session (PDF→PNG, 4 pages) succeeded, confirming the pdfium fix in the real app.
+  - After the titlebar close, there were no `omniconvert`/`ffmpeg`/`pandoc`/`typst` processes and the journal was empty.
+  - **Not yet done:** installing the NSIS build on a machine with the network adapter disabled. It needs elevation (per-machine install) and a clean VM.
+- **`.cargo/config.toml` moved to the repo root.** Cargo finds config by walking up from the current directory, not from `--manifest-path`. So every `npm run` cargo script (run from the root) skipped `src-tauri/.cargo/`, and ts-rs exported to a stray `src-tauri/bindings/` instead. At the root it's found from both `./` and `src-tauri/`.
+- **Installer config** lives in the `tauri.bundle.conf.json` overlay (used by `npm run tauri:build`), not the base config. `tauri dev`/`cargo check` would otherwise require the sidecars to exist on a fresh clone. App metadata (publisher, category, descriptions) is in the base config.
+
 ---
 
 ## Verification Gate (every phase)

@@ -6,6 +6,8 @@ mod queue;
 mod registry;
 mod sidecar;
 mod state;
+#[doc(hidden)]
+pub mod testkit;
 
 use tauri::{Emitter, Manager, RunEvent};
 
