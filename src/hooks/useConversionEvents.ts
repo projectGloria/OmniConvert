@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { platform } from "@platform";
+import type { Unlisten } from "../platform/types";
 import type { CompleteEvent } from "../types/generated/CompleteEvent";
 import type { ErrorEvent } from "../types/generated/ErrorEvent";
 import type { ProgressEvent } from "../types/generated/ProgressEvent";
@@ -16,26 +17,26 @@ import { useQueue } from "../store/queueStore";
 export function useConversionEvents(): void {
   useEffect(() => {
     let disposed = false;
-    const unlisteners: UnlistenFn[] = [];
+    const unlisteners: Unlisten[] = [];
     // listen() resolves asynchronously; under StrictMode cleanup can run first, so
     // late-arriving unlisten fns are invoked immediately instead of leaking.
-    const keep = (p: Promise<UnlistenFn>) =>
+    const keep = (p: Promise<Unlisten>) =>
       void p.then((fn) => (disposed ? fn() : unlisteners.push(fn)));
 
     keep(
-      listen<ProgressEvent>("conversion://progress", ({ payload }) => {
+      platform.listen<ProgressEvent>("conversion://progress", (payload) => {
         useProgress.getState().setProgress(payload.jobId, { value: payload.progress, stage: payload.stage });
         useQueue.getState().setStatus(payload.jobId, "running");
       }),
     );
     keep(
-      listen<CompleteEvent>("conversion://complete", ({ payload }) => {
+      platform.listen<CompleteEvent>("conversion://complete", (payload) => {
         useProgress.getState().setProgress(payload.jobId, { value: 1, stage: "Done" });
         useQueue.getState().setStatus(payload.jobId, "done", { output: payload.output, outputBytes: payload.outputBytes });
       }),
     );
     keep(
-      listen<ErrorEvent>("conversion://error", ({ payload }) => {
+      platform.listen<ErrorEvent>("conversion://error", (payload) => {
         useProgress.getState().drop(payload.jobId);
         useQueue
           .getState()

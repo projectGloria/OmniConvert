@@ -7,8 +7,8 @@ use image::imageops::FilterType;
 use super::pdf::{PdfBuilder, PdfImage};
 use super::{decode, jpeg_passthrough, svg};
 use crate::engines::error::EngineResult;
-use crate::engines::JobCtx;
-use crate::queue::job::JobSettings;
+use crate::engines::Ctx;
+use crate::settings::JobSettings;
 use crate::registry::Format;
 
 /// Formats the native pipeline decodes without a sidecar. AVIF is excluded on purpose:
@@ -16,7 +16,7 @@ use crate::registry::Format;
 pub const MERGEABLE: [Format; 8] =
     [Format::Png, Format::Jpg, Format::Webp, Format::Bmp, Format::Tiff, Format::Gif, Format::Ico, Format::Svg];
 
-pub fn merge_pdf(inputs: &[(PathBuf, Format)], settings: &JobSettings, out: &Path, ctx: &JobCtx) -> EngineResult<()> {
+pub fn merge_pdf(inputs: &[(PathBuf, Format)], settings: &JobSettings, out: &Path, ctx: &Ctx) -> EngineResult<()> {
     let total = inputs.len().max(1) as f32;
     let mut pdf = PdfBuilder::new();
 

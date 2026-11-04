@@ -7,10 +7,10 @@ mod write;
 mod xml;
 
 use super::error::{EngineError, EngineResult};
-use super::{ConvertSpec, JobCtx};
+use super::{ConvertSpec, Ctx};
 use crate::registry::TargetKind;
 
-pub fn convert(spec: &ConvertSpec, ctx: &JobCtx) -> EngineResult<()> {
+pub fn convert(spec: &ConvertSpec, ctx: &Ctx) -> EngineResult<()> {
     let TargetKind::Convert(dst) = spec.target else {
         return Err(EngineError::Unsupported("not a data conversion".into()));
     };

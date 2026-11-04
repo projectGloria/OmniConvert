@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { platform } from "@platform";
 import { useApp } from "../store/appStore";
 import { useQueue } from "../store/queueStore";
 import { probeFiles } from "./ipc";
@@ -21,8 +21,8 @@ export async function ingest(paths: string[]): Promise<void> {
   }
 }
 
-/** Native multi-file picker → ingest. */
+/** Native (desktop) or <input type=file> (web) multi-file picker → ingest. */
 export async function browse(): Promise<void> {
-  const picked = await open({ multiple: true, directory: false });
+  const picked = await platform.pickFiles();
   if (picked) await ingest(picked);
 }

@@ -5,7 +5,7 @@ use image::{Rgba, RgbaImage};
 use super::ctx;
 use crate::engines::error::EngineError;
 use crate::engines::image::merge::merge_pdf;
-use crate::queue::job::JobSettings;
+use crate::settings::JobSettings;
 use crate::registry::Format;
 
 #[test]

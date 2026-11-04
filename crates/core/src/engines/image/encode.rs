@@ -9,7 +9,7 @@ use image::imageops::{self, FilterType};
 use image::{DynamicImage, ExtendedColorType, ImageEncoder, ImageFormat, Rgba, RgbaImage, RgbImage};
 
 use crate::engines::error::{EngineError, EngineResult};
-use crate::queue::job::JobSettings;
+use crate::settings::JobSettings;
 use crate::registry::Format;
 
 const DEFAULT_QUALITY: u8 = 85;
@@ -32,12 +32,19 @@ pub fn encode(img: &DynamicImage, target: Format, settings: &JobSettings, out: &
         Format::Jpg => JpegEncoder::new_with_quality(&mut w, quality)
             .encode_image(&flatten(img, settings.background_rgb()))
             .map_err(EngineError::encode)?,
+        #[cfg(feature = "lossy-webp")]
         Format::Webp => {
             let rgba = img.to_rgba8();
             let enc = webp::Encoder::from_rgba(&rgba, rgba.width(), rgba.height());
             let mem = if quality >= 100 { enc.encode_lossless() } else { enc.encode(f32::from(quality)) };
             w.write_all(&mem)?;
         }
+        // No libwebp (WASM build): image's encoder is lossless-only. The web worker asks
+        // for PNG and uses the browser's lossy encoder instead whenever it can.
+        #[cfg(not(feature = "lossy-webp"))]
+        Format::Webp => DynamicImage::ImageRgba8(img.to_rgba8())
+            .write_to(&mut w, ImageFormat::WebP)
+            .map_err(EngineError::encode)?,
         Format::Avif => {
             let rgba = img.to_rgba8();
             AvifEncoder::new_with_speed_quality(&mut w, AVIF_SPEED, quality)

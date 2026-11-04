@@ -26,9 +26,11 @@ interface FormatPillProps {
   locked?: boolean;
   onSelect: (targetId: string) => void;
   applyAll?: Omit<ApplyAllProps, "target"> | undefined;
+  /** Text when there are no targets (default "Unsupported"). */
+  emptyLabel?: string | undefined;
 }
 
-export function FormatPill({ targets, selectedId, locked = false, onSelect, applyAll }: FormatPillProps) {
+export function FormatPill({ targets, selectedId, locked = false, onSelect, applyAll, emptyLabel = "Unsupported" }: FormatPillProps) {
   const [open, setOpen] = useState(false);
   // Derived on render: no need to store the selected Target object in state.
   const selected = selectedId ? targets.find((t) => t.id === selectedId) : undefined;
@@ -76,7 +78,7 @@ export function FormatPill({ targets, selectedId, locked = false, onSelect, appl
             : "border-line bg-base text-muted hover:border-[#2a2a32] hover:text-ink",
         )}
       >
-        <span className="truncate">{unsupported ? "Unsupported" : (selected?.label ?? "Choose format")}</span>
+        <span className="truncate">{unsupported ? emptyLabel : (selected?.label ?? "Choose format")}</span>
         {!disabled && <ChevronDown size={13} className={cn("shrink-0 transition-transform", open && "rotate-180")} />}
       </button>
 

@@ -9,10 +9,10 @@ use std::sync::Arc;
 
 use super::error::EngineResult;
 use super::util::CancelReader;
-use super::{ConvertSpec, JobCtx};
+use super::{ConvertSpec, Ctx};
 use write::Sink;
 
-pub fn convert(spec: &ConvertSpec, ctx: &JobCtx) -> EngineResult<()> {
+pub fn convert(spec: &ConvertSpec, ctx: &Ctx) -> EngineResult<()> {
     let total = fs::metadata(&spec.input)?.len().max(1) as f64;
     let pos = Arc::new(AtomicU64::new(0));
     let mut sink = Sink::open(spec.target, &spec.output)?;

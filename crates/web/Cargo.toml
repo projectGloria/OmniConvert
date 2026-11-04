@@ -1,0 +1,25 @@
+[package]
+name = "omniconvert-web"
+version = "0.1.0"
+description = "OmniConvert engine as a WASI command, run inside a browser Web Worker"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+# A WASI *command* (not wasm-bindgen): the worker gives it an in-memory filesystem via
+# @bjorn3/browser_wasi_shim, so the core engines' std::fs code runs unchanged.
+# Built with `npm run build:wasm` (target wasm32-wasip1, profile `web`). It also builds
+# natively, which is how `cargo test`/clippy cover it.
+[[bin]]
+name = "omniconvert-web"
+path = "src/main.rs"
+
+[dependencies]
+# No rayon (no threads without SharedArrayBuffer) and no libwebp (C) in the browser.
+omniconvert-core = { path = "../core", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio-util = "0.7.20"
+
+[dev-dependencies]
+tempfile = "3.27.0"

@@ -1,8 +1,12 @@
 node_modules/
 dist/
+dist-web/
+# Built by `npm run build:wasm` (CI builds it fresh for Pages)
+src/platform/web/engine/
 *.log
 
-# Rust
+# Rust (workspace target dir lives at the root)
+/target/
 src-tauri/target/
 src-tauri/gen/schemas/
 

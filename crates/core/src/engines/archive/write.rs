@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use sevenz_rust2::{ArchiveEntry, ArchiveWriter};
-use xz2::write::XzEncoder;
+use lzma_rust2::{XzOptions, XzWriter};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
@@ -24,7 +24,7 @@ pub enum Sink {
 pub enum TarOut {
     Plain(BufWriter<File>),
     Gz(GzEncoder<BufWriter<File>>),
-    Xz(XzEncoder<BufWriter<File>>),
+    Xz(XzWriter<BufWriter<File>>),
 }
 
 impl Write for TarOut {
@@ -58,8 +58,14 @@ impl Sink {
                 Sink::Tar(tar::Builder::new(TarOut::Gz(GzEncoder::new(file()?, Compression::default()))))
             }
             // xz preset 6 = the `xz` CLI default; 9 costs ~10× the time for a few % gain.
-            TargetKind::Convert(Format::Txz) => Sink::Tar(tar::Builder::new(TarOut::Xz(XzEncoder::new(file()?, 6)))),
-            TargetKind::Convert(Format::SevenZ) => Sink::SevenZ(ArchiveWriter::create(out).map_err(EngineError::encode)?),
+            // Pure-Rust lzma-rust2 (not liblzma via xz2) so this also builds for WASM.
+            TargetKind::Convert(Format::Txz) => {
+                Sink::Tar(tar::Builder::new(TarOut::Xz(XzWriter::new(file()?, XzOptions::with_preset(6))?)))
+            }
+            TargetKind::Convert(Format::SevenZ) => {
+                // ::new(File), not ::create(path): sevenz-rust2 cfg-gates `create` off on wasm32.
+                Sink::SevenZ(ArchiveWriter::new(File::create(out)?).map_err(EngineError::encode)?)
+            }
             other => return Err(EngineError::Unsupported(format!("{} is not an archive target", other.id()))),
         })
     }

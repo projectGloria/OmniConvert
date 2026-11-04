@@ -3,7 +3,7 @@
 pub mod job;
 pub mod journal;
 mod merge;
-pub mod output;
+pub use omniconvert_core::output;
 pub mod progress;
 mod runner;
 

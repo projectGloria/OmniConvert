@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { CheckCircle2, FolderOpen, X } from "lucide-react";
+import { CheckCircle2, Download, FolderOpen, X } from "lucide-react";
+import { platform } from "@platform";
 import { useShallow } from "zustand/react/shallow";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { useQueue } from "../../store/queueStore";
@@ -13,7 +13,7 @@ interface Summary {
   inBytes: number;
   outBytes: number;
   ms: number;
-  /** An output to reveal: Explorer opens its folder with the file selected. */
+  /** Whether any row produced an output (gates the reveal/download button). */
   firstOutput: string | null;
 }
 
@@ -43,6 +43,14 @@ function summarize(s: ReturnType<typeof useQueue.getState>): Summary | null {
   }
   return sum;
 }
+
+/** Read at click time, not subscribed: the list only matters when the button is pressed. */
+function batchOutputs(): string[] {
+  const s = useQueue.getState();
+  return (s.batch?.ids ?? []).flatMap((id) => (s.items[id]?.output ? [s.items[id].output] : []));
+}
+
+const RevealIcon = platform.kind === "web" ? Download : FolderOpen;
 
 export function BatchSummary() {
   // useShallow compares the returned object's fields — progress ticks elsewhere in the
@@ -76,10 +84,10 @@ export function BatchSummary() {
             {sum.firstOutput && (
               <button
                 type="button"
-                onClick={() => void revealItemInDir(sum.firstOutput!)}
+                onClick={() => void platform.revealAll(batchOutputs())}
                 className="flex items-center gap-1.5 rounded-md px-2 py-1 text-ink transition-colors hover:bg-raised"
               >
-                <FolderOpen size={13} className="text-muted" /> Open output folder
+                <RevealIcon size={13} className="text-muted" /> {platform.revealAllLabel}
               </button>
             )}
             <button type="button" aria-label="Dismiss summary" onClick={dismiss} className="grid size-6 place-items-center rounded text-muted hover:bg-raised hover:text-ink">

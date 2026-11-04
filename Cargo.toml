@@ -1,0 +1,29 @@
+# Workspace: one engine core, two shells.
+#   crates/core  — format registry + pure-Rust engines (no Tauri, no Tokio runtime).
+#   src-tauri    — desktop shell: job queue, sidecars, GPU, IPC.
+#   crates/web   — WASI command run in a Web Worker for the GitHub Pages build.
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/web", "src-tauri"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.93"
+
+# Profiles must live at the workspace root; member-level profiles are ignored.
+[profile.dev.package."*"]
+opt-level = 2 # deps optimized even in dev; our own crates stay fast to rebuild
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "unwind" # a panicking converter must fail its job, not abort the app
+
+# Web engine build (`npm run build:wasm`). wasm32 std ships panic=abort, so unwind
+# isn't an option there — a panic traps the instance and the worker reports the job
+# as crashed. Each job gets a fresh instance, so nothing leaks into the next one.
+[profile.web]
+inherits = "release"
+panic = "abort"

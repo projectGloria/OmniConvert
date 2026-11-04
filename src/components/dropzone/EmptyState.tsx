@@ -1,7 +1,13 @@
 import { FileStack } from "lucide-react";
+import { platform } from "@platform";
 import { browse } from "../../lib/ingest";
 
-const DOMAINS = ["Video", "Audio", "Image", "Document", "Data", "Archive"] as const;
+// The web build runs only the pure-Rust engines (for now); don't advertise the rest.
+const DOMAINS = platform.kind === "web" ? (["Image", "Spreadsheet", "Data", "Archive"] as const) : (["Video", "Audio", "Image", "Document", "Data", "Archive"] as const);
+const PRIVACY =
+  platform.kind === "web"
+    ? "Everything converts in your browser. Nothing is uploaded."
+    : "Everything converts locally. Nothing leaves this machine.";
 
 export function EmptyState() {
   // Fallback for users who don't drag-drop. Same ingest() path as a drop and Ctrl+O.
@@ -13,7 +19,7 @@ export function EmptyState() {
         </div>
         <div className="space-y-1.5">
           <h1 className="text-base font-semibold text-ink">Drop files anywhere</h1>
-          <p className="text-sm text-muted">Everything converts locally. Nothing leaves this machine.</p>
+          <p className="text-sm text-muted">{PRIVACY}</p>
         </div>
         <button
           type="button"

@@ -11,19 +11,15 @@ use std::sync::Arc;
 
 use tokio_util::sync::CancellationToken;
 
-use super::{ConvertSpec, JobCtx};
-use crate::gpu::GpuCaps;
-use crate::queue::job::JobSettings;
-use crate::queue::progress::NullSink;
+use super::{ConvertSpec, Ctx};
+use crate::progress::NullSink;
 use crate::registry::{Format, TargetKind};
-use crate::sidecar::Tools;
+use crate::settings::JobSettings;
 
-pub fn ctx() -> JobCtx {
-    JobCtx {
+pub fn ctx() -> Ctx {
+    Ctx {
         cancel: CancellationToken::new(),
         progress: Arc::new(NullSink),
-        tools: Arc::new(Tools::default()),
-        gpu: GpuCaps::default(),
     }
 }
 

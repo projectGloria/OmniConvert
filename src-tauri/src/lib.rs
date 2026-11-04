@@ -3,12 +3,14 @@ mod engines;
 mod error;
 mod gpu;
 mod queue;
-mod registry;
 mod sidecar;
 mod state;
 #[doc(hidden)]
 pub mod testkit;
 
+// Re-exported at the crate root so `crate::registry::…` paths read the same as before
+// the core crate split.
+use omniconvert_core::registry;
 use tauri::{Emitter, Manager, RunEvent};
 
 use sidecar::Tools;

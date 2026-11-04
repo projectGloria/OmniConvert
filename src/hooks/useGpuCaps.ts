@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { platform } from "@platform";
 import { gpuCaps } from "../lib/ipc";
 import { useApp } from "../store/appStore";
 import type { GpuCaps } from "../types/generated/GpuCaps";
@@ -18,7 +18,7 @@ export function useGpuCaps(): void {
       if (!disposed && (caps.ready || !useApp.getState().gpu.ready)) useApp.getState().setGpu(caps);
     };
 
-    void listen<GpuCaps>("system://gpu-ready", ({ payload }) => accept(payload)).then((fn) => {
+    void platform.listen<GpuCaps>("system://gpu-ready", accept).then((fn) => {
       if (disposed) fn(); // StrictMode: cleanup already ran
       else unlisten = fn;
     });

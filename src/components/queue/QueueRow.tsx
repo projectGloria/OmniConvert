@@ -1,5 +1,6 @@
 import { memo, useState, type MouseEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { platform } from "@platform";
 import { cn } from "../../lib/cn";
 import { useApp } from "../../store/appStore";
 import { useQueue } from "../../store/queueStore";
@@ -102,6 +103,9 @@ export const QueueRow = memo(function QueueRow({ id }: { id: JobId }) {
 
         <FormatPill
           targets={item.targets}
+          // Web: a recognised file with no targets is a sidecar route (video, audio,
+          // documents), not an unknown format — say where it *does* convert.
+          emptyLabel={item.format && platform.kind === "web" ? "Desktop app only" : undefined}
           selectedId={item.target}
           locked={ACTIVE.has(item.status) || item.merge !== null}
           onSelect={(t) => setTarget(id, t)}

@@ -2756,16 +2756,8 @@ name = "lzma-rust2"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1c46f3fcd2e888afdb01a07efc071cb21300e07c68d32c3e8b01b5c8cb1fcaa"
-
-[[package]]
-name = "lzma-sys"
-version = "0.1.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fda04ab3764e6cde78b9974eec4f779acaba7c4e84b36eca3cf77c581b85d27"
 dependencies = [
- "cc",
- "libc",
- "pkg-config",
+ "sha2 0.11.1",
 ]
 
 [[package]]
@@ -3264,15 +3256,38 @@ dependencies = [
 name = "omniconvert"
 version = "0.1.0"
 dependencies = [
+ "csv",
+ "hound",
+ "image",
+ "omniconvert-core",
+ "pdfium-render",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "ts-rs",
+ "windows-sys 0.61.2",
+ "zip 7.4.0",
+]
+
+[[package]]
+name = "omniconvert-core"
+version = "0.1.0"
+dependencies = [
  "calamine",
  "csv",
  "dunce",
  "flate2",
- "hound",
  "image",
  "infer",
  "lopdf",
- "pdfium-render",
+ "lzma-rust2",
  "pulldown-cmark",
  "quick-xml 0.37.5",
  "resvg",
@@ -3282,20 +3297,24 @@ dependencies = [
  "serde_yaml_ng",
  "sevenz-rust2",
  "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
  "tempfile",
  "thiserror 2.0.21",
- "tokio",
  "tokio-util",
  "toml 1.2.0+spec-1.1.0",
  "ts-rs",
  "webp",
- "windows-sys 0.61.2",
- "xz2",
  "zip 7.4.0",
+]
+
+[[package]]
+name = "omniconvert-web"
+version = "0.1.0"
+dependencies = [
+ "omniconvert-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio-util",
 ]
 
 [[package]]
@@ -6378,15 +6397,6 @@ name = "xmlwriter"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
-
-[[package]]
-name = "xz2"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "388c44dc09d76f1536602ead6d325eb532f5c122f17782bd57fb47baeeb767e2"
-dependencies = [
- "lzma-sys",
-]
 
 [[package]]
 name = "y4m"

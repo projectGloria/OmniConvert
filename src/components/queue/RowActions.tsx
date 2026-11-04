@@ -1,11 +1,12 @@
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { FolderSearch, RotateCcw, Square, X } from "lucide-react";
+import { Download, FolderSearch, RotateCcw, Square, X } from "lucide-react";
+import { platform } from "@platform";
 import { convert } from "../../lib/convert";
 import { cancelJob } from "../../lib/ipc";
 import { useQueue } from "../../store/queueStore";
 import { ACTIVE, type QueueItem } from "../../types/queue";
 import { SettingsButton } from "../settings/SettingsButton";
 
+const RevealIcon = platform.kind === "web" ? Download : FolderSearch;
 const ICON_BTN = "grid size-7 place-items-center rounded-md text-muted transition hover:bg-raised hover:text-ink";
 
 export function RowActions({ item }: { item: QueueItem }) {
@@ -18,12 +19,12 @@ export function RowActions({ item }: { item: QueueItem }) {
       {item.status === "done" && item.output && (
         <button
           type="button"
-          title="Show in Explorer"
-          aria-label={`Show ${item.name} output in Explorer`}
-          onClick={() => void revealItemInDir(item.output!)}
+          title={platform.revealLabel}
+          aria-label={`${platform.revealLabel}: ${item.name} output`}
+          onClick={() => void platform.reveal(item.output!)}
           className={`${ICON_BTN} text-success hover:text-success`}
         >
-          <FolderSearch size={15} strokeWidth={1.75} />
+          <RevealIcon size={15} strokeWidth={1.75} />
         </button>
       )}
 

@@ -1,0 +1,48 @@
+[package]
+name = "omniconvert-core"
+version = "0.1.0"
+description = "OmniConvert format registry and pure-Rust conversion engines"
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["parallel", "lossy-webp"]
+# rayon inside `image`/rav1e. Off for wasm32-wasip1 (no threads without SharedArrayBuffer).
+parallel = ["image/rayon"]
+# libwebp (C) for lossy WebP. Off for WASM: the web worker encodes lossy WebP with the
+# browser's own encoder instead, and this crate falls back to image's lossless encoder.
+lossy-webp = ["dep:webp"]
+
+[dependencies]
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+ts-rs = "12.0.1"
+tokio-util = "0.7.20" # CancellationToken (sync-only use; no runtime needed)
+dunce = "1.0.5"
+
+# --- Registry + data engine ---
+infer = "0.22.0"
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml_ng = "0.10.0" # serde_yaml is archived/unmaintained
+toml = "1.2"
+csv = "1.4.0"
+calamine = { version = "0.38", features = ["dates"] }
+rust_xlsxwriter = "0.102"
+quick-xml = "0.37"
+pulldown-cmark = "0.13.6"
+
+# --- Image engine ---
+image = { version = "0.25.9", default-features = false, features = ["png", "jpeg", "gif", "bmp", "tiff", "ico", "webp", "avif"] }
+webp = { version = "0.3.1", optional = true }
+resvg = "0.49.0"
+lopdf = "0.47"
+
+# --- Archive engine (all pure Rust, so it builds for wasm32-wasip1) ---
+zip = { version = "7.3.0", default-features = false, features = ["deflate", "time"] }
+tar = "0.4.46"
+flate2 = "1.1.10"
+lzma-rust2 = { version = "0.23", default-features = false, features = ["std", "encoder", "optimization", "xz"] }
+sevenz-rust2 = "0.24"
+
+[dev-dependencies]
+tempfile = "3.27.0"

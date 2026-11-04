@@ -6,6 +6,9 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "types": ["vite/client"],
+    // Type-checks against the desktop adapter; vite.config.ts swaps it per build mode.
+    // Both adapters are under src/, so both are type-checked against platform/types.ts.
+    "paths": { "@platform": ["./src/platform/tauri/index.ts"] },
     "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,

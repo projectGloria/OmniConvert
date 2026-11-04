@@ -1,17 +1,13 @@
-//! Conversion engines. Nothing in here knows about Tauri (PLAN D9): engines get a
-//! `ConvertSpec` + `JobCtx` and write to `spec.output`, so `cargo test` can drive them.
+//! Desktop engine routing. Pure-Rust engines come from `omniconvert-core` (shared with
+//! the web build); sidecar engines (ffmpeg, pandoc, pdfium) live here (PLAN D9 still
+//! holds: none of them know about Tauri, so `cargo test` can drive them).
 
-pub mod archive;
-pub mod data;
 pub mod document;
-pub mod error;
-pub mod image;
 pub mod media;
 pub mod pdf;
-mod util;
 
-#[cfg(test)]
-mod tests;
+// Re-exported so `crate::engines::image::…` etc. keep resolving after the core split.
+pub use omniconvert_core::engines::{archive, data, error, image, util, ConvertSpec};
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,19 +17,10 @@ use tokio_util::sync::CancellationToken;
 use crate::gpu::GpuCaps;
 use crate::queue::job::JobSettings;
 use crate::queue::progress::ProgressSink;
-use crate::registry::{route_for, EngineRoute, Format, TargetKind};
+use crate::registry::{route_for, EngineRoute, Format};
 use crate::sidecar::Tools;
 use error::{EngineError, EngineResult};
-
-/// One fully-resolved conversion. `output` is the *part* path (see queue::output).
-#[derive(Debug, Clone)]
-pub struct ConvertSpec {
-    pub input: PathBuf,
-    pub src: Format,
-    pub target: TargetKind,
-    pub output: PathBuf,
-    pub settings: JobSettings,
-}
+use omniconvert_core::engines::Ctx;
 
 /// Owned (Arc/clone) so it can cross into `spawn_blocking`, which demands 'static.
 #[derive(Clone)]
@@ -53,6 +40,11 @@ impl JobCtx {
             Ok(())
         }
     }
+
+    /// The slice of this context the core (pure-Rust) engines need.
+    pub fn native(&self) -> Ctx {
+        Ctx { cancel: self.cancel.clone(), progress: Arc::clone(&self.progress) }
+    }
 }
 
 /// Route a job to its engine. Sidecar engines are async (they await processes);
@@ -67,20 +59,20 @@ pub async fn execute(spec: ConvertSpec, ctx: JobCtx) -> EngineResult<()> {
             let png = spec.output.with_extension("omni-decode.png");
             media::decode_still(&spec.input, &png, &ctx).await?;
             let next = ConvertSpec { input: png.clone(), src: Format::Png, ..spec };
-            let result = blocking(ctx, move |c| image::convert(&next, &c)).await;
+            let result = blocking(ctx, move |c| image::convert(&next, &c.native())).await;
             let _ = std::fs::remove_file(&png);
             result
         }
-        EngineRoute::Image | EngineRoute::Svg => blocking(ctx, move |c| image::convert(&spec, &c)).await,
+        EngineRoute::Image | EngineRoute::Svg => blocking(ctx, move |c| image::convert(&spec, &c.native())).await,
         EngineRoute::Pdf => blocking(ctx, move |c| pdf::convert(&spec, &c)).await,
-        EngineRoute::Data => blocking(ctx, move |c| data::convert(&spec, &c)).await,
-        EngineRoute::Archive => blocking(ctx, move |c| archive::convert(&spec, &c)).await,
+        EngineRoute::Data => blocking(ctx, move |c| data::convert(&spec, &c.native())).await,
+        EngineRoute::Archive => blocking(ctx, move |c| archive::convert(&spec, &c.native())).await,
     }
 }
 
 /// "Merge to PDF" (one job, many inputs) — see engines::image::merge.
 pub async fn merge_pdf(inputs: Vec<(PathBuf, Format)>, settings: JobSettings, out: PathBuf, ctx: JobCtx) -> EngineResult<()> {
-    blocking(ctx, move |c| image::merge::merge_pdf(&inputs, &settings, &out, &c)).await
+    blocking(ctx, move |c| image::merge::merge_pdf(&inputs, &settings, &out, &c.native())).await
 }
 
 async fn blocking<F>(ctx: JobCtx, f: F) -> EngineResult<()>

@@ -40,6 +40,12 @@ pub struct PdfBuilder {
     kids: Vec<Object>,
 }
 
+impl Default for PdfBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PdfBuilder {
     pub fn new() -> Self {
         let mut doc = Document::with_version("1.7");

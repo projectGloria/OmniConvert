@@ -13,11 +13,11 @@ use image::imageops::FilterType;
 use image::{DynamicImage, ImageDecoder, ImageReader};
 
 use super::error::{EngineError, EngineResult};
-use super::{ConvertSpec, JobCtx};
+use super::{ConvertSpec, Ctx};
 use crate::registry::{Format, TargetKind};
 use pdf::PdfImage;
 
-pub fn convert(spec: &ConvertSpec, ctx: &JobCtx) -> EngineResult<()> {
+pub fn convert(spec: &ConvertSpec, ctx: &Ctx) -> EngineResult<()> {
     let TargetKind::Convert(target) = spec.target else {
         return Err(EngineError::Unsupported("not an image conversion".into()));
     };

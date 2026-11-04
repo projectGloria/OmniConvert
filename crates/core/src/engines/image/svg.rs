@@ -5,7 +5,7 @@ use image::{DynamicImage, RgbaImage};
 use resvg::{tiny_skia, usvg};
 
 use crate::engines::error::{EngineError, EngineResult};
-use crate::queue::job::JobSettings;
+use crate::settings::JobSettings;
 
 /// Hard ceiling so a hostile `width="999999"` SVG can't allocate gigabytes.
 const MAX_SIDE: f32 = 16_384.0;

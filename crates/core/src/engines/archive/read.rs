@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use flate2::read::GzDecoder;
 use sevenz_rust2::{ArchiveReader, Password};
-use xz2::read::XzDecoder;
+use lzma_rust2::XzReader;
 
 use crate::engines::error::{EngineError, EngineResult};
 use crate::engines::util::Tracked;
@@ -31,7 +31,7 @@ pub fn for_each(src: Format, path: &Path, pos: Arc<AtomicU64>, visit: &mut Visit
         Format::Zip => zip_entries(file, visit),
         Format::Tar => tar_entries(file, visit),
         Format::Tgz => tar_entries(GzDecoder::new(file), visit),
-        Format::Txz => tar_entries(XzDecoder::new(file), visit),
+        Format::Txz => tar_entries(XzReader::new(file, true), visit),
         Format::SevenZ => sevenz_entries(file, visit),
         // Single-stream compressors: one entry named after the file minus its suffix.
         Format::Gz | Format::Xz => {
@@ -40,7 +40,7 @@ pub fn for_each(src: Format, path: &Path, pos: Arc<AtomicU64>, visit: &mut Visit
             if src == Format::Gz {
                 visit(&meta, &mut GzDecoder::new(file))
             } else {
-                visit(&meta, &mut XzDecoder::new(file))
+                visit(&meta, &mut XzReader::new(file, true))
             }
         }
         other => Err(EngineError::Unsupported(format!("{} is not an archive", other.label()))),
