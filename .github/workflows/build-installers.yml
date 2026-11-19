@@ -1,0 +1,125 @@
+name: Build Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows x64 Installers
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-windows-x64
+
+      - name: Cache sidecar binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/binaries
+            src-tauri/resources
+          key: ${{ runner.os }}-sidecars-${{ hashFiles('scripts/sidecars.lock.json') }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Fetch and verify sidecars
+        run: npm run sidecars
+
+      - name: Resolve version
+        id: meta
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -like 'v*') {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } else {
+            $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+            $version = $conf.version
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Building OmniConvert version $version"
+
+      - name: Build NSIS and MSI installers
+        shell: pwsh
+        run: |
+          $version = "${{ steps.meta.outputs.version }}"
+          $tauriArgs = @('tauri', 'build', '--config', 'src-tauri/tauri.bundle.conf.json')
+          if ($version -match '^\d+\.\d+\.\d+$') {
+            $overridePath = Join-Path $env:RUNNER_TEMP 'tauri.version.conf.json'
+            @{ version = $version } | ConvertTo-Json | Set-Content -Path $overridePath -Encoding utf8
+            $tauriArgs += @('--config', $overridePath)
+          }
+          npx @tauriArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Collect installers into installers/
+        shell: pwsh
+        run: |
+          $version = "${{ steps.meta.outputs.version }}"
+          $outDir = "installers"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+          $bundleRoots = @("target/release/bundle", "src-tauri/target/release/bundle") | Where-Object { Test-Path $_ }
+          if (-not $bundleRoots) {
+            throw "No Tauri bundle directory found."
+          }
+
+          $nsisDirs = $bundleRoots | ForEach-Object { Join-Path $_ "nsis" } | Where-Object { Test-Path $_ }
+          $msiDirs  = $bundleRoots | ForEach-Object { Join-Path $_ "msi" }  | Where-Object { Test-Path $_ }
+
+          $nsis = if ($nsisDirs) { Get-ChildItem -Path $nsisDirs -Filter "*.exe" -File | Select-Object -First 1 }
+          $msi  = if ($msiDirs)  { Get-ChildItem -Path $msiDirs  -Filter "*.msi" -File | Select-Object -First 1 }
+
+          if (-not $nsis) { throw "NSIS .exe installer not found." }
+          if (-not $msi)  { throw "WiX .msi installer not found." }
+
+          Copy-Item $nsis.FullName (Join-Path $outDir "OmniConvert-$version-windows-x64.exe") -Force
+          Copy-Item $msi.FullName  (Join-Path $outDir "OmniConvert-$version-windows-x64.msi") -Force
+
+          Get-ChildItem $outDir | Format-Table Name, Length -AutoSize
+
+      - name: Upload installers artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: installers/
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: installers
+          path: installers
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installers/*
+          generate_release_notes: true

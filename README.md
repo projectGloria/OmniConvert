@@ -29,6 +29,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Building from Source](#building-from-source)
+- [How to Release](#how-to-release)
 - [License & Credits](#license--credits)
 
 ---
@@ -223,6 +224,20 @@ Run the repository verification suite (TypeScript checks, 200-line module limits
 ```powershell
 npm run verify
 ```
+
+---
+
+## How to Release
+
+Pushing a version tag starting with `v` triggers the **Build Installers** GitHub Actions workflow, which builds the Windows x64 NSIS (`.exe`) and WiX (`.msi`) installers and publishes them to a GitHub Release.
+
+```powershell
+git tag v1.0.0
+git push --tags
+```
+
+- **Tag releases:** Download `OmniConvert-<version>-windows-x64.exe` and `OmniConvert-<version>-windows-x64.msi` from the [GitHub Releases](https://github.com/projectGloria/OmniConvert/releases) page.
+- **Manual builds:** Trigger **Build Installers** from the **Actions** tab (`workflow_dispatch`) and download the `installers` artifact from the completed workflow run.
 
 ---
 
