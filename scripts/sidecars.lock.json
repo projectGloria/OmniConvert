@@ -1,9 +1,9 @@
 {
     "ffmpeg":  {
-                   "version":  "autobuild-2026-11-04-12-51",
-                   "file":  "ffmpeg-n9.0.2-47-gb204e94e90-win64-gpl-9.0.zip",
-                   "url":  "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-04-12-51/ffmpeg-n9.0.2-47-gb204e94e90-win64-gpl-9.0.zip",
-                   "sha256":  "db2867364898bf8b68f5404b998165dfd8d31c9bfabc2a35d6e0c941bf33c1ea"
+                   "version":  "autobuild-2026-11-20-12-40",
+                   "file":  "ffmpeg-n9.0.2-61-gd59078794d-win64-gpl-9.0.zip",
+                   "url":  "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-20-12-40/ffmpeg-n9.0.2-61-gd59078794d-win64-gpl-9.0.zip",
+                   "sha256":  "b9c8240dc689c1967768b6f421905ed2b9ad8d9cc033dc99e701d39171a39b19"
                },
     "pandoc":  {
                    "version":  "3.13",
