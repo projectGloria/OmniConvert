@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing version tag to build and publish (leave empty for an artifact only)
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -13,9 +18,13 @@ jobs:
   build:
     name: Build Windows x64 Setup
     runs-on: windows-latest
+    outputs:
+      release_tag: ${{ steps.meta.outputs.release_tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,19 +52,30 @@ jobs:
         run: npm ci
 
       - name: Fetch and verify sidecars
-        run: npm run sidecars
+        shell: pwsh
+        run: ./scripts/fetch-sidecars.ps1
 
       - name: Resolve version
         id: meta
         shell: pwsh
+        env:
+          REQUESTED_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -like 'v*') {
-            $version = $env:GITHUB_REF_NAME.Substring(1)
+          if ($env:REQUESTED_RELEASE_TAG -and $env:REQUESTED_RELEASE_TAG -cnotmatch '^v\d+\.\d+\.\d+$') {
+            throw "Expected a release tag in vMAJOR.MINOR.PATCH format."
+          }
+          $releaseTag = $env:REQUESTED_RELEASE_TAG
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -like 'v*' -and -not $releaseTag) {
+            $releaseTag = $env:GITHUB_REF_NAME
+          }
+          if ($releaseTag) {
+            $version = $releaseTag.Substring(1)
           } else {
             $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
             $version = $conf.version
           }
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "release_tag=$releaseTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Host "Building OmniConvert version $version"
 
       - name: Build OmniConvert binary
@@ -117,7 +137,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.build.outputs.release_tag != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -131,5 +151,6 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.build.outputs.release_tag }}
           files: installers/*
           generate_release_notes: true
