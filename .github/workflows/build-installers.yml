@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Windows x64 Installers
+    name: Build Windows x64 Setup
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -58,11 +58,11 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Host "Building OmniConvert version $version"
 
-      - name: Build NSIS and MSI installers
+      - name: Build OmniConvert binary
         shell: pwsh
         run: |
           $version = "${{ steps.meta.outputs.version }}"
-          $tauriArgs = @('tauri', 'build', '--config', 'src-tauri/tauri.bundle.conf.json')
+          $tauriArgs = @('tauri', 'build', '--no-bundle')
           if ($version -match '^\d+\.\d+\.\d+$') {
             $overridePath = Join-Path $env:RUNNER_TEMP 'tauri.version.conf.json'
             @{ version = $version } | ConvertTo-Json | Set-Content -Path $overridePath -Encoding utf8
@@ -71,37 +71,47 @@ jobs:
           npx @tauriArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Collect installers into installers/
+      - name: Stage app directory and fetch WebView2 bootstrapper
         shell: pwsh
         run: |
-          $version = "${{ steps.meta.outputs.version }}"
-          $outDir = "installers"
-          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          $ErrorActionPreference = 'Stop'
+          $stage = "app-dist"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-          $bundleRoots = @("target/release/bundle", "src-tauri/target/release/bundle") | Where-Object { Test-Path $_ }
-          if (-not $bundleRoots) {
-            throw "No Tauri bundle directory found."
+          $exe = @("target/release/omniconvert.exe", "src-tauri/target/release/omniconvert.exe") |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "Built omniconvert.exe not found." }
+          Copy-Item $exe (Join-Path $stage "omniconvert.exe") -Force
+
+          foreach ($tool in 'ffmpeg', 'ffprobe', 'pandoc', 'typst') {
+            $src = "src-tauri/binaries/$tool-x86_64-pc-windows-msvc.exe"
+            if (-not (Test-Path $src)) { throw "Sidecar $src not found." }
+            Copy-Item $src (Join-Path $stage "$tool.exe") -Force
           }
 
-          $nsisDirs = $bundleRoots | ForEach-Object { Join-Path $_ "nsis" } | Where-Object { Test-Path $_ }
-          $msiDirs  = $bundleRoots | ForEach-Object { Join-Path $_ "msi" }  | Where-Object { Test-Path $_ }
+          $pdfium = "src-tauri/resources/pdfium.dll"
+          if (-not (Test-Path $pdfium)) { throw "Resource $pdfium not found." }
+          Copy-Item $pdfium (Join-Path $stage "pdfium.dll") -Force
 
-          $nsis = if ($nsisDirs) { Get-ChildItem -Path $nsisDirs -Filter "*.exe" -File | Select-Object -First 1 }
-          $msi  = if ($msiDirs)  { Get-ChildItem -Path $msiDirs  -Filter "*.msi" -File | Select-Object -First 1 }
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" `
+            -OutFile (Join-Path $env:RUNNER_TEMP "MicrosoftEdgeWebview2Setup.exe")
 
-          if (-not $nsis) { throw "NSIS .exe installer not found." }
-          if (-not $msi)  { throw "WiX .msi installer not found." }
-
-          Copy-Item $nsis.FullName (Join-Path $outDir "OmniConvert-$version-windows-x64.exe") -Force
-          Copy-Item $msi.FullName  (Join-Path $outDir "OmniConvert-$version-windows-x64.msi") -Force
-
-          Get-ChildItem $outDir | Format-Table Name, Length -AutoSize
+      - name: Pack installer with GloriaSetup
+        id: pack
+        uses: projectGloria/GloriaSetup@v0.1.0
+        with:
+          app-dir: app-dist
+          manifest: gloria.toml
+          version: ${{ steps.meta.outputs.version }}
+          webview2-bootstrapper: ${{ runner.temp }}\MicrosoftEdgeWebview2Setup.exe
+          out-dir: installers
+          upload: 'false'
 
       - name: Upload installers artifact
         uses: actions/upload-artifact@v4
         with:
           name: installers
-          path: installers/
+          path: installers/*_x64-setup.exe
           if-no-files-found: error
 
   release:

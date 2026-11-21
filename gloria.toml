@@ -1,0 +1,11 @@
+id                = "OmniConvert"
+name              = "OmniConvert"
+version           = "0.1.0"
+main_exe          = "omniconvert.exe"
+icon              = "src-tauri/icons/icon.ico"
+accent            = "#6366f1"
+description       = "Offline universal file converter"
+needs_webview2    = true
+data_folders      = ['%APPDATA%\com.omniconvert.app', '%LOCALAPPDATA%\com.omniconvert.app']
+legacy_names      = ["OmniConvert"]
+app_user_model_id = "com.omniconvert.app"
