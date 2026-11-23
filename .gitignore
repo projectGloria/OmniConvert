@@ -21,3 +21,4 @@ src-tauri/resources/*
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+[Dd]esktop.ini
